@@ -1,0 +1,52 @@
+---
+title: "Supported chains overview"
+description: "At-a-glance matrix of chains, networks, clients, and node types Novacula supports"
+---
+
+Novacula supports five blockchains today, each implemented as a chain adapter inside `@vos/adapter` and exposed through the same `ChainAdapter` interface. This page is the matrix; the per-chain pages cover ports, defaults, and override surfaces in detail.
+
+## Matrix
+
+| Chain | Networks | Roles | Clients | Node types | Per-chain page |
+| --- | --- | --- | --- | --- | --- |
+| **Bitcoin** | `mainnet`, `test`, `signet` | `node` | `bitcoind` | Full | [Bitcoin](/en/chains/bitcoin) |
+| **BSC** | `mainnet`, `chapel` | `node` | `geth` (BSC fork) | Full, Archive | [BSC](/en/chains/bsc) |
+| **Ethereum** | `mainnet`, `sepolia`, `hoodi` | `el` + `cl` | EL: `geth`, `reth`, `nethermind`, `erigon`<br/>CL: `lighthouse`, `prysm`, `lodestar` | Full, Archive | [Ethereum](/en/chains/ethereum) |
+| **Sui** | `mainnet`, `testnet` | `node` | `sui-node` | Full | [Sui](/en/chains/sui) |
+| **Tron** | `mainnet`, `nile` | `node` | `java-tron` | Full | [Tron](/en/chains/tron) |
+
+The exact set of versions a *given executor* can run is its [capabilities](/en/executors/executor-capabilities) blob, declared on every sync. The deploy wizard intersects this matrix with the target executor's capabilities.
+
+## Per-network defaults at a glance
+
+The chain adapter ships per-network resource defaults, used by the deploy wizard to pre-fill the resource form. Lowering them surfaces a non-blocking warning.
+
+| Chain × network | Default CPU | Default RAM | Default disk |
+| --- | --- | --- | --- |
+| Bitcoin mainnet | 2 cores | 4 GiB | 600 GiB |
+| Bitcoin test | 2 cores | 4 GiB | 600 GiB |
+| Bitcoin signet | 1 core | 2 GiB | 20 GiB |
+| BSC mainnet | 4 cores | 16 GiB | 500 GiB |
+| BSC chapel | 4 cores | 16 GiB | 500 GiB |
+| Ethereum mainnet | 4 cores | 16 GiB | 2548 GiB |
+| Ethereum sepolia | 2 cores | 8 GiB | 300 GiB |
+| Ethereum hoodi | 2 cores | 8 GiB | 300 GiB |
+| Sui mainnet | 16 cores | 128 GiB | 4000 GiB |
+| Sui testnet | 8 cores | 64 GiB | 3000 GiB |
+| Tron mainnet | 16 cores | 32 GiB | 4000 GiB |
+| Tron nile | 8 cores | 16 GiB | 300 GiB |
+
+Numbers above are for **Full** nodes. Archive (Ethereum, BSC) needs more disk — see the per-chain pages.
+
+## What each chain shares
+
+All chains, regardless of client choice, share these conventions:
+
+- **Outbound from the executor.** No inbound ports need exposing for the platform; you may still want to expose RPC for your own use.
+- **Single data directory per node.** The chain adapter writes config + data under a single mount (Operator: one PVC; Agent: a subdirectory under `data_dir`).
+- **Init steps are codified.** Genesis blob downloads (Sui), JWT secret generation (Ethereum), snapshot fetches (Tron, optional), and checkpoint sync URLs (Ethereum CL) are all init-container or init-step logic owned by the adapter, not config you maintain.
+- **Override schema.** Every adapter declares `managedPaths` / `managedFlags` (rejected if you try to override) and `knownKeys` / `knownFlags` (typed, described, rendered with hints in the UI). See [Edit node configuration](/en/nodes/edit-configuration).
+
+## Adding chain support
+
+A new chain is a new entry under `packages/adapter/src/<chain>/` implementing `ChainAdapter`. Once an adapter ships in an executor release, executors running that release declare it in their capabilities, and the deploy wizard exposes it. There is no control-plane-side schema change required; chains are discovered from capabilities at runtime.

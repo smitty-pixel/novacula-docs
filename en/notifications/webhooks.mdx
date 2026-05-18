@@ -1,0 +1,82 @@
+---
+title: "Webhooks"
+description: "Push alert incidents to your own systems via outbound webhook"
+---
+
+A **webhook** is the platform's outbound notification channel: when an [alert rule](/en/notifications/alert-rules) fires or resolves, the control plane POSTs a JSON payload to a URL you configure. Use it to hook Novacula into your incident management (PagerDuty, Opsgenie), chat (Slack via incoming webhooks), or your own internal alerting.
+
+There is exactly one webhook URL per organization today — multi-channel routing is on the roadmap.
+
+## Configure
+
+From **Settings** → **Notifications**:
+
+1. **Webhook URL** — any HTTPS URL that accepts POST.
+2. **Webhook enabled** — checkbox; flip to off to keep the URL but stop firing.
+3. **Test** — sends a synthetic payload to the URL and records the result as a `WebhookDelivery` you can inspect.
+
+Settings are written to `NotificationSettings` (one row per org) on save.
+
+## Payload
+
+The control plane POSTs a JSON body for every incident transition. The exact schema is stable across deliveries; the high-level shape is:
+
+```jsonc
+{
+  "rule": "node_down",          // or "disk_usage"
+  "status": "open",             // or "resolved"
+  "subjectKind": "node",
+  "subjectKey": "<node-id>",
+  "subjectName": "eth-mainnet-prod-01",
+  "message": "Node eth-mainnet-prod-01 is down",
+  "openedAt": "2026-05-15T13:42:00.000Z",
+  "resolvedAt": null,           // populated on a "resolved" delivery
+  "incidentId": "<uuid>"
+}
+```
+
+Both `opened` and `resolved` transitions deliver — distinguish by `status`.
+
+## Delivery semantics
+
+- **Per-incident**: one delivery per state change. An incident that opens and resolves results in two deliveries.
+- **Timeout**: 5s per request. Slower endpoints will be marked as failures.
+- **No retries today**: a failed delivery is recorded and not retried automatically. The platform will surface it on the **Webhook deliveries** page so you can replay manually.
+- **Outbound only**: deliveries originate from the control plane's egress; if your endpoint is behind IP-allowlisting, allow control-plane egress IPs (provided on request).
+
+## Delivery history
+
+Every attempt — success or failure — writes a `WebhookDelivery` row carrying:
+
+- `targetUrl` (helpful when you've rotated URLs).
+- `requestBody` (full JSON sent).
+- `ok` boolean.
+- `statusCode` from the receiver.
+- `responseBody` (truncated to 4 000 chars).
+- `errorMessage` for transport failures (timeout, DNS, TLS).
+- `createdAt`.
+
+Visible at **Settings** → **Notifications** → **Webhook deliveries**. Up to 50 most recent deliveries are kept.
+
+## Test webhook
+
+The **Test** button calls the `testNotificationWebhook` mutation, which constructs a synthetic incident payload and fires one delivery against the saved URL. Use this to:
+
+- Confirm the URL is reachable.
+- Validate your receiver parses the schema correctly.
+- Smoke-test signature handling (when added — not currently used).
+
+The test delivery shows up in the deliveries page like any real one, marked `incidentId = null`.
+
+## Adapting to common targets
+
+- **Slack** — point at your channel's incoming webhook URL. Slack expects a `text` field; today's payload doesn't match Slack's schema directly, so you'll want a small forwarder (a Cloudflare Worker / Lambda) that translates Novacula's payload into Slack's.
+- **PagerDuty Events API v2** — same story: forwarder that maps `status: "open"` → `event_action: "trigger"` and `status: "resolved"` → `event_action: "resolve"`.
+- **Internal HTTP API** — POST direct.
+
+## Permissions
+
+- **Configure URL + enable/disable + send test:** owner, admin.
+- **Read deliveries:** any org member.
+
+See [Roles and permissions](/en/platform/roles-and-permissions).

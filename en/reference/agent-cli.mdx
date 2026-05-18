@@ -1,0 +1,117 @@
+---
+title: "Agent CLI"
+description: "Command-line interface of the Novacula Agent — install, lifecycle, status, manual upgrade"
+---
+
+The Novacula Agent ships its own CLI built on [Citty](https://github.com/unjs/citty). The same binary that runs as the `systemd` service also exposes operator commands you'll need for install, lifecycle, status, and manual upgrade.
+
+```bash
+novacula-agent <subcommand> [flags]
+novacula-agent --help
+```
+
+The binary is the compiled output of `bun build --compile`; it has no runtime dependency on Bun, Node, or anything else.
+
+## Subcommands
+
+### `run`
+
+Run the agent daemon in the foreground. This is what the systemd unit `ExecStart=`s — you only run it by hand for debugging or for non-systemd setups.
+
+```bash
+sudo novacula-agent run --config /etc/novacula/agent.toml
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--config`, `-c` | `/etc/novacula/agent.toml` | Path to the agent TOML config file |
+
+Reads the config (or the `NOVACULA_CONFIG` env var if set), loads all chain adapters, registers with the control plane, and runs the three loops (PollingClient, Reconciler, Reporter) until killed with `SIGTERM` / `SIGINT`.
+
+### `install`
+
+Install the systemd units and enable the service. Runs once per host, after dropping the binary onto the system and writing the config file.
+
+```bash
+sudo novacula-agent install \
+  --config /etc/novacula/agent.toml \
+  --binary /usr/local/bin/novacula-agent
+```
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `--config`, `-c` | `/etc/novacula/agent.toml` | Path the unit file will reference |
+| `--binary`, `-b` | `process.execPath` | Path the unit file will `ExecStart=` |
+
+Writes:
+
+- `/etc/systemd/system/novacula-agent.service` (main unit)
+- `/etc/systemd/system/novacula-agent-rollback.service` (one-shot OnFailure rollback)
+
+Then runs `systemctl daemon-reload && systemctl enable novacula-agent`.
+
+### `uninstall`
+
+Inverse of `install`. Removes the systemd units; **does not** stop a running service or remove the binary or `data_dir`.
+
+```bash
+sudo novacula-agent uninstall
+```
+
+Use this when decommissioning a host (after stopping the service):
+
+```bash
+sudo systemctl stop novacula-agent
+sudo novacula-agent uninstall
+sudo rm -rf /etc/novacula /var/lib/novacula /usr/local/bin/novacula-agent
+```
+
+### `start` / `stop` / `restart`
+
+Thin wrappers around `systemctl <verb> novacula-agent.service`:
+
+```bash
+sudo novacula-agent start
+sudo novacula-agent stop
+sudo novacula-agent restart
+```
+
+Equivalent to running `systemctl` directly; provided so the agent is the single entrypoint for ops scripts.
+
+### `status`
+
+Print a one-line status summary derived from `systemctl show`:
+
+```bash
+novacula-agent status
+```
+
+Surfaces `ActiveState`, `MainPID`, and `ExecMainStatus`. For full status, `systemctl status novacula-agent.service` remains the right tool.
+
+### `upgrade`
+
+Manually trigger a self-upgrade against a known release artifact — used for **out-of-band** upgrades when you can't or don't want to drive the upgrade from the control plane UI. Requires the same SHA-256 + minisign verification as the automated path.
+
+```bash
+sudo novacula-agent upgrade \
+  --target-version <X.Y.Z> \
+  --download-url <url> \
+  --sha256 <hex> \
+  --signature <minisign-sig>
+```
+
+The flags are exactly the fields of an `AgentUpgradeSpec`. Refer to the source if you need to script this; the typical operator path is to re-issue the upgrade from the UI rather than run this by hand.
+
+## Exit codes
+
+`0` on success; non-zero from any underlying `systemctl` call is propagated up.
+
+## Logging
+
+Logs go to stdout in JSON by default (or `pretty` if `[logging] format = "pretty"` in the config). When run as the systemd service, `journalctl -u novacula-agent` is the right reader.
+
+## Related
+
+- [Provision an executor on bare-metal](/en/infrastructure/provision-on-bare-metal) — full install walkthrough.
+- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — recovery for stuck self-updates.
+- [Configuration reference](/en/reference/configuration) — the agent TOML schema.

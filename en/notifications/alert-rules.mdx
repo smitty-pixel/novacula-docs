@@ -1,0 +1,70 @@
+---
+title: "Alert rules"
+description: "Built-in alert rules — node down, disk usage — and how to configure thresholds and routing"
+---
+
+Novacula ships two built-in alert rules and an outbound webhook channel. Alerts open and resolve as **incidents** (one row in the `AlertIncident` table per open alert per subject), and each incident triggers a webhook delivery if the channel is enabled.
+
+## Built-in rules
+
+| Rule | Subject | Fires when | Resolves when |
+| --- | --- | --- | --- |
+| **`node_down`** | A node | `desiredState = running` AND observed status is `stopped` or `error` | observed status returns to `running` / `syncing` / `starting` |
+| **`disk_usage`** | A node | Reported disk usage exceeds the configured threshold | Usage drops back below the threshold |
+
+Both rules are evaluated every time a node's `ObservedNodeState` is updated by the executor — typically every 10s. Incidents that meet the resolution condition are auto-closed; the close timestamp lands on `resolvedAt`.
+
+## Org-wide settings
+
+From **Settings** → **Notifications**, you can configure:
+
+- **`nodeDownEnabled`** — globally turn the `node_down` rule on or off. Default: on.
+- **`diskUsageEnabled`** — globally turn the `disk_usage` rule on or off. Default: on.
+- **`diskUsageThresholdPercent`** — the percentage at which `disk_usage` fires. Default: 85. Clamped to 1..100.
+
+These settings live on the `NotificationSettings` row keyed by `organizationId`.
+
+## Per-node overrides
+
+Any node can override the org-wide settings independently — useful for canary nodes that should be allowed to run noisy without paging, or critical nodes with stricter thresholds. See [Per-node notification overrides](/en/notifications/per-node-overrides).
+
+The effective settings for a node are the merge of org defaults + node override. Each setting can be overridden independently — overriding only the threshold while inheriting the on/off flag works fine.
+
+## Incidents
+
+When an alert rule fires:
+
+1. An **`AlertIncident`** row is created with `status = open`, `openedAt = now`, plus the subject reference (`subjectKind`, `subjectKey`, `subjectName`).
+2. A `notification.alert.opened` event is written to the [Events feed](/en/notifications/events-feed).
+3. If the org has a configured webhook and `webhookEnabled = true`, a `WebhookDelivery` is fired — see [Webhooks](/en/notifications/webhooks).
+
+When the resolution condition is met:
+
+1. The same row's `status` becomes `resolved` and `resolvedAt = now`.
+2. A `notification.alert.resolved` event is written.
+3. A second webhook delivery fires (a `closed` payload, distinct from the `opened` one).
+
+## Notification center
+
+The **bell** in the topbar shows:
+
+- **Open count** — number of currently-open incidents across the org.
+- **Latest incidents** — top 10 most recent incidents (open or resolved). Click through to the full incident history.
+
+The full incident page supports filtering by `open` / `resolved` status.
+
+## Retired rules
+
+Two earlier rules — `sync_stalled` and `executor_disconnected` — were retired. Existing incident rows for them are preserved in the database and visible in the history list, but no new ones are produced.
+
+## Limits
+
+- One open incident per `(rule, subjectKey)` at a time. The rule won't open a second incident until the first resolves.
+- The platform has no per-rule cooldown — incidents resolve and re-open as the underlying state changes. If a node flaps, you'll see one incident per flap.
+
+## Permissions
+
+Read incident history and effective settings — any org role.
+Edit org-wide notification settings or per-node overrides — owner or admin.
+
+See [Roles and permissions](/en/platform/roles-and-permissions).

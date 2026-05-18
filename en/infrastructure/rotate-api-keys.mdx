@@ -1,0 +1,101 @@
+---
+title: "Rotate executor API keys"
+description: "Swap the API key an executor uses with no downtime — both backends"
+---
+
+API keys can leak. Rotating an executor's key on a schedule (or in response to a suspected leak) keeps blast radius small without taking any nodes offline. The flow is the same shape on both backends: issue a new key, walk it out to the executor, confirm the executor authenticated successfully, retire the old key.
+
+## When to rotate
+
+- **Routine** — every 90 days for production keys (a good audit-friendly cadence).
+- **On exit** — when a teammate who handled the key leaves or changes responsibilities.
+- **On suspicion** — anytime you can't account for where the key has been seen (chat logs, screenshots, dev laptops).
+
+## Steps (common to both backends)
+
+<Steps>
+  <Step title="Issue a new key">
+    From **Settings** → **API keys** → **Create API key**:
+
+    - Use a name that makes the rotation explicit, e.g. `agent-1-2026-05`.
+    - Same `purpose` (`executor`) as the old key.
+    - Copy the plaintext value — it is shown only once.
+
+    The new key is active immediately. The old one is also still active; both work in parallel until you disable the old.
+  </Step>
+  <Step title="Walk the new key out to the executor">
+    Backend-specific (see below).
+  </Step>
+  <Step title="Restart the executor process">
+    The executor reads the API key once at startup. After replacing the key on disk, restart the process so the next `syncExecutor` uses the new value.
+  </Step>
+  <Step title="Confirm the new key authenticated">
+    On the API keys page, the new key's **Last used** column updates within ~5s. Cross-reference with the executor row's "last used key" indicator — it should reflect the new key id.
+  </Step>
+  <Step title="Disable the old key">
+    Once the new key is confirmed working:
+
+    1. Find the old key in the list.
+    2. Click **Disable**.
+    3. Optionally **Delete** after a cooldown (a day is safe — gives you a clean rollback window).
+
+    Disable invalidates the old key for any future call. Existing in-flight requests succeed; subsequent ones return `401`.
+  </Step>
+</Steps>
+
+## Agent (bare-metal)
+
+Replace the value in `/etc/novacula/agent.toml`:
+
+```bash
+sudo sed -i 's|access_token = .*|access_token = "<new-api-key>"|' /etc/novacula/agent.toml
+sudo systemctl restart novacula-agent
+```
+
+Confirm:
+
+```bash
+journalctl -u novacula-agent -n 20 --no-pager | grep -i 'auth\|sync'
+```
+
+Should show a successful `syncExecutor` after the restart.
+
+## Operator (Kubernetes)
+
+Update the `Secret` and bounce the operator pod:
+
+```bash
+kubectl -n novacula-system create secret generic novacula-operator-auth \
+  --from-literal=accessToken=<new-api-key> \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n novacula-system rollout restart deploy/novacula-operator
+kubectl -n novacula-system rollout status deploy/novacula-operator
+```
+
+Confirm:
+
+```bash
+kubectl logs -n novacula-system deploy/novacula-operator --tail=30 | grep -i 'auth\|sync'
+```
+
+If you mount the secret as an env var (the chart's default), Kubernetes will not auto-restart the pod when the secret changes — the explicit `rollout restart` is required.
+
+## Failure recovery
+
+If the executor fails to come back up after the rotation:
+
+1. **Don't disable the old key yet.** Run on parallel keys until the new one works.
+2. Check the executor logs for the auth error message. The most common cause is a copy-paste error introducing whitespace.
+3. If you've already disabled the old key, re-enable it from the API keys list — disabled keys can be re-enabled (deleted ones cannot).
+4. If you've deleted the old key and the new one still fails, issue a third key and try again.
+
+## Why parallel keys
+
+The reason this is zero-downtime is that the new key is active before the old is disabled. The executor restart cleanly hands off authentication; the control plane never refuses a sync because of the rotation itself.
+
+If you instead **delete** the old key first and then create a new one, you create a window where the executor can't authenticate at all — its row will go `offline` and any nodes assigned to it stop reconciling until the new key is in place.
+
+## Audit
+
+Every key creation, disable, and delete is recorded in the audit log with actor + target. The key id (not the plaintext) appears in the log line so you can correlate it with the executor's `ExecutorApiKeyUsage` history.

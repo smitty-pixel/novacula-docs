@@ -1,0 +1,51 @@
+---
+title: "API keys"
+description: "Org-scoped tokens that executors present to the control plane — create, rotate, revoke, delete"
+---
+
+An **API key** is the credential an executor uses to authenticate with the control plane. Keys are scoped to an organization: a key issued under org A cannot be used to register an executor under org B.
+
+API keys are also the credential of choice for any external automation that wants to call the [GraphQL API](/en/reference/graphql-api).
+
+## Create a key
+
+Open **Settings** → **API keys** → **Create API key**:
+
+1. **Name** — internal label, shown in the key list and audit log. Pick something descriptive: `prod-cluster-1-operator`, `ops-laptop-readonly`.
+2. **Purpose** — `executor` (the common case) or `personal` (CLI / API automation tied to your user).
+3. **Expiry** — optional. Keys without an expiry never auto-revoke.
+
+The full key string is shown **only once** on the success screen.
+
+<Warning>
+Copy the key immediately and store it where you can retrieve it during install — a password manager, a secrets vault, or your provisioning system. There is no recovery path if you lose it; you must rotate.
+</Warning>
+
+## How keys flow through the platform
+
+- The executor presents the key on every `syncExecutor` call.
+- The `AuthGuard` in the control plane validates the key, sets `activeOrganizationId` from the key's metadata, and proceeds.
+- An **`ExecutorApiKeyUsage`** row is updated with the timestamp of last use, so you can see which key each executor most recently authenticated with.
+
+## List and rotate
+
+The key list shows: name, purpose, created-by, expiry, and last-used timestamp. Common operations:
+
+- **Rotate** — issue a new key with the same metadata, immediately invalidating the old. The new key is shown once. Walk the new key out to the executor (see [Rotate executor API keys](/en/infrastructure/rotate-api-keys)) and the executor will pick it up on its next call.
+- **Disable** — sets the key inactive without deleting the row. The executor will start failing `syncExecutor` and go offline within `HEARTBEAT_TIMEOUT_MS`.
+- **Delete** — removes the row entirely. Audit history of the key (which executors used it, when) is retained for compliance.
+
+## Permissions
+
+- **Create / rotate / disable / delete:** owners and admins.
+- **List + read last-used:** any org member.
+- The full plaintext key is shown only at creation time and never re-displayed; even owners and system admins cannot read an existing key.
+
+## Best practice
+
+- Issue **one key per executor** so disabling a single executor doesn't affect others.
+- Set an **expiry** for short-term or contractor-issued keys.
+- **Rotate** any key that's been seen on a developer laptop or in a chat thread, even if you can't prove it leaked.
+- Use **disable** before delete when you're decommissioning an executor — gives you a 30s confirmation that the right key is being retired.
+
+See [Rotate executor API keys](/en/infrastructure/rotate-api-keys) for the zero-downtime rotation flow.

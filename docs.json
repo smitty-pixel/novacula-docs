@@ -1,0 +1,263 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Novacula",
+  "description": "Novacula — B2B platform for managing blockchain validator nodes",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#55D799",
+    "dark": "#0D9373"
+  },
+  "navigation": {
+    "languages": [
+      {
+        "language": "en",
+        "default": true,
+        "tabs": [
+          {
+            "tab": "Guides",
+            "groups": [
+              {
+                "group": "Get Started",
+                "pages": [
+                  "en/introduction",
+                  "en/get-started/quickstart",
+                  "en/get-started/key-concepts"
+                ]
+              },
+              {
+                "group": "Platform",
+                "pages": [
+                  "en/platform/architecture",
+                  "en/platform/desired-state-model",
+                  "en/platform/execution-backends",
+                  "en/platform/chains-and-networks",
+                  "en/platform/roles-and-permissions"
+                ]
+              },
+              {
+                "group": "Account",
+                "pages": [
+                  "en/account/account",
+                  "en/account/organization",
+                  "en/account/members-and-invitations",
+                  "en/account/api-keys",
+                  "en/account/sessions"
+                ]
+              },
+              {
+                "group": "Executors",
+                "pages": [
+                  "en/executors/overview",
+                  "en/executors/connect-an-executor",
+                  "en/executors/executor-capabilities",
+                  "en/executors/upgrade-executor",
+                  "en/executors/deactivate-executor",
+                  "en/executors/agent-bare-metal",
+                  "en/executors/operator-kubernetes"
+                ]
+              },
+              {
+                "group": "Nodes",
+                "pages": [
+                  "en/nodes/overview",
+                  "en/nodes/deploy-a-node",
+                  "en/nodes/node-lifecycle",
+                  "en/nodes/edit-configuration",
+                  "en/nodes/upgrade-node",
+                  "en/nodes/groups-and-tags",
+                  "en/nodes/logs",
+                  "en/nodes/monitoring"
+                ]
+              },
+              {
+                "group": "Notifications & Events",
+                "pages": [
+                  "en/notifications/events-feed",
+                  "en/notifications/alert-rules",
+                  "en/notifications/webhooks",
+                  "en/notifications/per-node-overrides"
+                ]
+              },
+              {
+                "group": "Supported Chains",
+                "pages": [
+                  "en/chains/overview",
+                  "en/chains/bitcoin",
+                  "en/chains/bsc",
+                  "en/chains/ethereum",
+                  "en/chains/sui",
+                  "en/chains/tron"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Recipes",
+            "groups": [
+              {
+                "group": "Infrastructure",
+                "pages": [
+                  "en/infrastructure/provision-on-kubernetes",
+                  "en/infrastructure/provision-on-bare-metal",
+                  "en/infrastructure/rotate-api-keys",
+                  "en/infrastructure/apply-upgrades"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "API",
+            "groups": [
+              {
+                "group": "Reference",
+                "pages": [
+                  "en/reference/graphql-api",
+                  "en/reference/configuration",
+                  "en/reference/environment-variables",
+                  "en/reference/agent-cli"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Release notes",
+            "groups": [
+              {
+                "group": "Release notes",
+                "pages": [
+                  "en/release-notes"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "ru",
+        "tabs": [
+          {
+            "tab": "Руководства",
+            "groups": [
+              {
+                "group": "Начало работы",
+                "pages": [
+                  "ru/introduction",
+                  "ru/get-started/quickstart",
+                  "ru/get-started/key-concepts"
+                ]
+              },
+              {
+                "group": "Платформа",
+                "pages": [
+                  "ru/platform/architecture",
+                  "ru/platform/desired-state-model",
+                  "ru/platform/execution-backends",
+                  "ru/platform/chains-and-networks",
+                  "ru/platform/roles-and-permissions"
+                ]
+              },
+              {
+                "group": "Аккаунт",
+                "pages": [
+                  "ru/account/account",
+                  "ru/account/organization",
+                  "ru/account/members-and-invitations",
+                  "ru/account/api-keys",
+                  "ru/account/sessions"
+                ]
+              },
+              {
+                "group": "Executors",
+                "pages": [
+                  "ru/executors/overview",
+                  "ru/executors/connect-an-executor",
+                  "ru/executors/executor-capabilities",
+                  "ru/executors/upgrade-executor",
+                  "ru/executors/deactivate-executor",
+                  "ru/executors/agent-bare-metal",
+                  "ru/executors/operator-kubernetes"
+                ]
+              },
+              {
+                "group": "Узлы",
+                "pages": [
+                  "ru/nodes/overview",
+                  "ru/nodes/deploy-a-node",
+                  "ru/nodes/node-lifecycle",
+                  "ru/nodes/edit-configuration",
+                  "ru/nodes/upgrade-node",
+                  "ru/nodes/groups-and-tags",
+                  "ru/nodes/logs",
+                  "ru/nodes/monitoring"
+                ]
+              },
+              {
+                "group": "Уведомления и события",
+                "pages": [
+                  "ru/notifications/events-feed",
+                  "ru/notifications/alert-rules",
+                  "ru/notifications/webhooks",
+                  "ru/notifications/per-node-overrides"
+                ]
+              },
+              {
+                "group": "Поддерживаемые сети",
+                "pages": [
+                  "ru/chains/overview",
+                  "ru/chains/bitcoin",
+                  "ru/chains/bsc",
+                  "ru/chains/ethereum",
+                  "ru/chains/sui",
+                  "ru/chains/tron"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Рецепты",
+            "groups": [
+              {
+                "group": "Инфраструктура",
+                "pages": [
+                  "ru/infrastructure/provision-on-kubernetes",
+                  "ru/infrastructure/provision-on-bare-metal",
+                  "ru/infrastructure/rotate-api-keys",
+                  "ru/infrastructure/apply-upgrades"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "API",
+            "groups": [
+              {
+                "group": "Справочник",
+                "pages": [
+                  "ru/reference/graphql-api",
+                  "ru/reference/configuration",
+                  "ru/reference/environment-variables",
+                  "ru/reference/agent-cli"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Релиз-заметки",
+            "groups": [
+              {
+                "group": "Релиз-заметки",
+                "pages": [
+                  "ru/release-notes"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {}
+  }
+}

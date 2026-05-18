@@ -1,0 +1,47 @@
+---
+title: "Per-node notification overrides"
+description: "Override the org-wide alert rules for individual nodes — silence noisy ones, tighten critical ones"
+---
+
+By default, every node uses the org-wide [alert rule](/en/notifications/alert-rules) settings. Per-node overrides let you raise or lower that policy for individual nodes — typical reasons: silencing a canary that's allowed to flap, or tightening the disk threshold on a critical node where 85% is too late.
+
+Overrides live on `NotificationNodeOverride` rows keyed by `(organizationId, nodeId)`. There is at most one override row per node.
+
+## What you can override
+
+Each setting can be overridden independently. Leaving a field unset on the override means "inherit org default."
+
+| Field | Org-wide default (typical) | Override semantics |
+| --- | --- | --- |
+| `nodeDownEnabled` | `true` | `true` / `false` to set; unset to inherit |
+| `diskUsageEnabled` | `true` | `true` / `false` to set; unset to inherit |
+| `diskUsageThresholdPercent` | `85` | 1..100 integer; unset to inherit |
+
+The **effective** policy used for evaluation is the merge: org default for unset fields, override value for set fields. The notification settings page exposes each node's effective values alongside the override (so you can see what's currently in force at a glance).
+
+## Where to set them
+
+From **Settings** → **Notifications** → **Per-node policies**. Each node in the org appears as a row showing:
+
+- Node name, chain, network, executor.
+- Effective `nodeDownEnabled`, `diskUsageEnabled`, `diskUsageThresholdPercent`.
+- An edit affordance to change the override.
+
+Saving an override calls the same `saveNotificationSettings` mutation as the org-wide form, with a `nodeOverrides` array. Removing all override fields on a node deletes its override row.
+
+## Common patterns
+
+- **Silence a canary node.** Set `nodeDownEnabled = false` on the canary. Disk alerts still fire (or override that too).
+- **Stricter disk threshold for a high-write chain.** On a Sui mainnet node that grows fast, drop `diskUsageThresholdPercent` from 85 → 75 so you have lead time to expand the volume before it fills.
+- **Don't alert on a stopped-but-managed node.** If you intentionally keep a node `desiredState = stopped` for testing, set `nodeDownEnabled = false` so it doesn't open an incident.
+
+## Permissions
+
+- **Read** effective policy and override status — any org member.
+- **Edit** an override — owner, admin.
+
+See [Roles and permissions](/en/platform/roles-and-permissions).
+
+## Audit trail
+
+Override changes are written to the [Events feed](/en/notifications/events-feed) and the audit log. The actor and the diff (org default → override value, or override removed) are captured for compliance.

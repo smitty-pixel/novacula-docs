@@ -1,0 +1,58 @@
+---
+title: "Execution backends"
+description: "Agent (bare-metal, systemd) and Operator (Kubernetes) — two backends behind the same ChainAdapter interface"
+---
+
+A Novacula node runs through one of two execution backends. Both are **executors** in the platform sense: each authenticates to the control plane with an API key, polls outbound for assigned specs, reconciles them, and reports back. They differ only in *how* they materialize a node spec on the underlying infrastructure.
+
+Both backends consume the same `ChainAdapter` interface and the same `NodeSpec` wire type, so a node defined under one backend is portable to the other.
+
+## Side by side
+
+| Aspect | [Agent](/en/executors/agent-bare-metal) | [Operator](/en/executors/operator-kubernetes) |
+| --- | --- | --- |
+| Runs on | A Linux host (Ubuntu 22.04+, Debian 12+) | A Kubernetes cluster (1.27+) |
+| Distribution | Standalone binary (compiled with `bun build --compile`) | Helm chart + auto-applied CRD |
+| Process model | One `systemd` service per node process | One `StatefulSet` + `ConfigMap` per node |
+| Storage | A directory under `data_dir` (default `/var/lib/novacula`) | A `PersistentVolumeClaim` per storage spec |
+| Resource limits | Best-effort cgroup hints | Native pod requests/limits |
+| Self-upgrade | Atomic binary swap with `systemd OnFailure=` rollback | Patch own `Deployment` image; monitor + rollback on `ImagePullBackOff` / `CrashLoopBackOff` |
+| Best for | A handful of dedicated machines, edge or colo deployments | Multi-node fleets, mixed workloads, existing K8s ops |
+
+## Shared contract
+
+Whichever backend you use, the executor speaks the same protocol to the control plane:
+
+- **`syncExecutor`** every 5s (default) — heartbeat + capabilities + reported binary version.
+- **Long-poll for specs** — the control plane returns the latest revision of every node assigned to this executor.
+- **`ObservedNodeState`** report — per-process status, sync metrics, current revision.
+- **Lifecycle action acks** — start / stop / restart pickups translate into a new spec revision the reconciler applies.
+
+This is why it's safe to think of a node as just *a row in the control plane*: the backend is an implementation detail that doesn't leak into the spec.
+
+## How a node becomes real
+
+### Agent
+
+1. Reconciler ticks; sees a new revision.
+2. Chain adapter generates config files and a process command line.
+3. Adapter installs the client binary into `data_dir/bin` if missing.
+4. Agent writes a `systemd` unit and `systemctl daemon-reload && systemctl start <unit>`.
+5. Reporter loop scrapes the process's metrics endpoint and writes status back.
+
+### Operator
+
+1. Reconciler ticks; sees a new revision.
+2. Operator applies a `BlockchainNode` custom resource (CRD `validatoros.com/v1alpha1`).
+3. The same operator's controller loop converts the CR into a `ConfigMap` (rendered config) plus a `StatefulSet` (pod template + volume claims).
+4. Kubernetes does its thing: schedule pod, mount volumes, pull images, run init containers, start the main containers.
+5. Status collector polls per-pod metrics endpoints and writes status back through the same `syncExecutor` channel.
+
+## When to choose which
+
+- **Pick the Agent** if your nodes will live on dedicated hosts you already manage with Ansible / Terraform / cloud-init, and you don't want to add a Kubernetes dependency. Storage stays on a local disk; recovery is `systemctl restart`.
+- **Pick the Operator** if you already operate Kubernetes (especially with a CSI provider that gives you fast persistent volumes), want pod-level isolation between unrelated nodes, or plan to scale fleets where treating "each node = a pod" matches the rest of your tooling.
+
+You can mix both under the same organization. A spec deployed against an Agent executor and a spec deployed against an Operator executor look identical in the UI; the executor list distinguishes them by the `kind` field.
+
+See [Connect an executor](/en/executors/connect-an-executor) for the bring-up flow that's common to both.

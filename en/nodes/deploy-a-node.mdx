@@ -1,0 +1,63 @@
+---
+title: "Deploy a node"
+description: "Step-by-step walkthrough of the Deploy node wizard — target, resources, custom config, review"
+---
+
+Use the Deploy node wizard to provision a new validator node onto one of your connected executors. The wizard has four steps; each step constrains the next, so options narrow as you progress.
+
+## Prerequisites
+
+- A connected, healthy executor — see [Connect an executor](/en/executors/connect-an-executor).
+- The executor has declared **capabilities** for the chain, client, and version you want. If your chosen combination is missing, [upgrade the executor](/en/executors/upgrade-executor) first.
+- A role with deploy permission: **Org Owner** or **Org Admin**. See [Roles and permissions](/en/platform/roles-and-permissions).
+
+## Steps
+
+<Steps>
+  <Step title="Target">
+    Open **Nodes** → **Deploy node** and pick, in order:
+
+    - **Executor** — only executors with capabilities matching the next fields appear.
+    - **Chain** — Bitcoin, BSC, Ethereum, Sui, Tron. See [Supported chains](/en/chains/overview).
+    - **Network** — for example `mainnet`, `testnet`, `sepolia`, `signet`. Available networks depend on the chain.
+    - **Node type** — `Full` everywhere; `Archive` on Ethereum and BSC only.
+    - **Client + version** — for two-role chains (Ethereum), pick an EL client and a CL client independently.
+  </Step>
+  <Step title="Resources">
+    The wizard pre-fills CPU, RAM, and disk with the **per-network defaults** from the chain adapter — `mainnet` is consistently the heaviest, testnets are much lighter.
+
+    You can raise or lower any field:
+
+    - **Storage size** and **storage class** (Operator only) determine the persistent volume the node will use.
+    - **CPU request / limit** and **memory request / limit** are honored as resource requests on Kubernetes and as cgroup-style limits on the Agent (best-effort).
+
+    <Warning>
+    Lowering defaults below the recommended minimum surfaces a non-blocking capacity warning. The node will still start, but you may see reconciliation churn or stalled sync.
+    </Warning>
+  </Step>
+  <Step title="Custom config">
+    Optional. Two override surfaces, depending on the chain:
+
+    - **Config-file overrides** — written into a chain-specific file (`bitcoin.conf`, `fullnode.yaml`, `config.conf`). Only keys on the per-adapter whitelist are accepted; managed keys (data-dir, RPC bindings, ports) are rejected at validate time.
+    - **CLI argument overrides** — merged with the adapter's managed `--flag` list. Forbidden flags are rejected.
+
+    Ethereum CL clients also accept a **`checkpoint-sync-url`** as a first-class field, letting the CL fast-sync from a trusted checkpoint provider instead of from genesis.
+
+    See the per-chain page for the override matrix — for example [Bitcoin](/en/chains/bitcoin) or [Ethereum](/en/chains/ethereum).
+  </Step>
+  <Step title="Review and confirm">
+    The review screen shows the final spec — every field you filled, plus all platform-managed values (ports, data-dir, init steps).
+
+    Confirm. The wizard creates the node at revision 1; the target executor picks it up on its next poll (typically within seconds) and starts reconciling.
+  </Step>
+</Steps>
+
+## What happens next
+
+The node detail page becomes the source of truth:
+
+- **Status** — populated from the executor's reporter loop, refreshed on each poll.
+- **Logs** — streamed live from each underlying process. See [Node logs](/en/nodes/logs).
+- **Monitoring** — sync progress, peers, and per-process metrics. See [Node monitoring](/en/nodes/monitoring).
+
+To change anything after deploy — resources, config, or version — see [Edit node configuration](/en/nodes/edit-configuration) and [Upgrade a node](/en/nodes/upgrade-node).

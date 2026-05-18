@@ -1,0 +1,58 @@
+---
+title: "Node logs"
+description: "View live and tailed logs per process — how to scope, filter, and what gets streamed"
+---
+
+The **Logs** tab on a node detail page streams output live from each of the node's underlying processes. The stream goes from the executor's log scraper, through the control plane via Server-Sent Events, into your browser — outbound-only at every hop.
+
+## Per-process scope
+
+The role selector at the top of the tab corresponds to the node's `clients` map:
+
+- **Single-role chains** (Bitcoin, BSC, Sui, Tron) — one role, defaulted: `node`.
+- **Ethereum** — pick `el` to stream the execution-layer client (Geth / Reth / Nethermind / Erigon), or `cl` for the consensus-layer client (Lighthouse / Prysm / Lodestar).
+
+Switching roles closes the current stream and opens a new one against the other process. Logs are not interleaved — to watch both at once, open a second tab.
+
+## Tail
+
+The **tail** value (default 200, max 1000) sets how many of the most recent lines the executor sends as the initial replay. After that, lines stream live as the process emits them.
+
+A bigger tail means you see more historical context up front but pay a one-time bandwidth burst. For routine monitoring, the default is fine; for incident triage, max it out.
+
+## Level filter
+
+Pick a minimum level (`debug` / `info` / `warn` / `error`). The executor parses the underlying client's log format, classifies each line, and skips lines below the threshold before forwarding. Different clients use different conventions — Geth's `WARN`, Lighthouse's `WARN`, Bitcoin's `warning` are all normalized to `warn` server-side.
+
+`info` is the default. Drop to `warn` if a noisy process is flooding you.
+
+## Live vs paused
+
+The stream auto-scrolls as new lines arrive. Click **Pause** to freeze the view; the stream keeps running in the background, and **Resume** flushes everything queued up since you paused. **Clear** wipes the visible buffer without affecting the upstream session.
+
+## How streaming works
+
+Internally:
+
+1. The browser opens an SSE connection at `/nodes/:id/logs/stream` against the control plane.
+2. The control plane creates a **log session** keyed against the executor that owns the node.
+3. The next time that executor's `pollExecutorLogSessions` long-poll fires, it picks up the session.
+4. The executor `tail`s the corresponding `systemd` unit (Agent) or pod log (Operator), filters by level, and POSTs chunks back to the control plane.
+5. The control plane fans the chunks back out to your SSE connection.
+
+Because everything happens over the same outbound channel the executor already uses, you don't need any inbound connectivity to your nodes — even when you're streaming gigabytes of debug output, the connection direction never changes.
+
+## Closing the stream
+
+The stream stays open while the tab is focused. Closing the tab, navigating away, or losing connectivity for more than the polling timeout shuts the session down server-side; the executor stops tailing.
+
+## Limits
+
+- **Max tail** — 1000 lines (initial replay).
+- **Max wait per poll** — 30s (executor side; controls how long the executor blocks waiting for new sessions).
+- **No persistence** — log content is not stored in the control plane database. If you want long-term retention, ship logs from your infrastructure to your own log store as well; the platform doesn't keep history beyond the live stream.
+
+## Related
+
+- [Node monitoring](/en/nodes/monitoring) — for sync progress, peers, and per-process metrics that *are* persisted.
+- [Events feed](/en/notifications/events-feed) — for structured events (lifecycle transitions, errors) that *are* persisted.

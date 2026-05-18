@@ -1,0 +1,84 @@
+---
+title: "Node lifecycle"
+description: "Start, stop, restart, and delete a node — what each action does and how the executor applies it"
+---
+
+Lifecycle actions are how you change a node's runtime state without changing its configuration. Each action edits the spec's **`desiredState`** field; the executor reconciles to it on its next tick. There is no out-of-band "kill the process" — every transition flows through the same desired-state path.
+
+## Actions
+
+| Action | Sets `desiredState` to | Other effects |
+| --- | --- | --- |
+| **Start** | `running` | Creates a new revision; executor starts the underlying processes. |
+| **Stop** | `stopped` | Creates a new revision; executor stops the processes (and removes pods on Operator). Volumes/data preserved. |
+| **Restart** | `running` (already) | Bumps `restartGeneration`. Executor sees the bump and re-rolls the processes. |
+| **Delete** | n/a | Hard-removes the node spec; executor tears down processes and (optionally) data. |
+
+Triggered from the node detail page via **Actions** → ... or from the row's kebab menu in the node list.
+
+## What happens behind the scenes
+
+Every action calls the `requestNodeLifecycleAction` mutation, which:
+
+1. Writes a new `Node.spec` revision with the requested `desiredState` (and an incremented `restartGeneration` for restart).
+2. Records a `node.lifecycle.requested` event in the [Events feed](/en/notifications/events-feed) attributed to the user who triggered it.
+3. Returns immediately. Nothing has touched the executor yet.
+
+On its next polling tick (≤5s), the executor:
+
+1. Sees the new revision.
+2. The reconciler diffs `desired` vs `observed` and acts:
+   - If `running → stopped`: stop the systemd unit / scale the StatefulSet to 0.
+   - If `stopped → running`: ensure the unit is started / pod is scheduled.
+   - If `restartGeneration` bumped: stop then start (or rollout-restart on Operator).
+3. The reporter loop picks up the new `ObservedNodeStatus` (`stopping` → `stopped`, etc.) and writes it back via `syncExecutor`.
+4. A `node.lifecycle.transition` event is recorded once observed status crosses the threshold.
+
+## Stop semantics
+
+`Stop` halts the processes but keeps everything else intact:
+
+- **Agent** — `systemctl stop <unit>`. The data directory under `<data_dir>/nodes/<name>/` is untouched.
+- **Operator** — the `BlockchainNode` CR's status flips to `Stopping`; the `StatefulSet` scales to 0 replicas. The PVC is retained.
+
+Re-starting the node resumes from where it left off — no resync from genesis.
+
+## Restart semantics
+
+`Restart` is a clean stop + start. Use it after editing config (the [Edit configuration](/en/nodes/edit-configuration) flow already triggers this implicitly when needed) or to recover a process that's stuck without changing anything else.
+
+## Delete
+
+Deleting a node is the only irreversible action. It:
+
+1. Calls `deleteNode`. The spec row is marked deleted.
+2. Writes a `node.deleted` event.
+3. The executor sees the deletion on its next poll and:
+   - **Agent** — stops + removes the systemd units and removes the data directory under `<data_dir>/nodes/<name>/` (configurable retention coming).
+   - **Operator** — deletes the `BlockchainNode` CR. Cascading delete of the `StatefulSet`, `ConfigMap`, and `Service`. **PVCs are retained by default** — Kubernetes default behavior — so re-deploying a node with the same name on the same operator will reuse the prior data, unless you explicitly `kubectl delete pvc` first.
+
+<Warning>
+On the Agent backend, delete *removes the data directory*. There is no automatic snapshot. If you need the data, copy it off-host first.
+</Warning>
+
+## State machine
+
+The platform tracks a derived **node phase** for the colored status badge in the UI. The phases:
+
+| Phase | Meaning |
+| --- | --- |
+| `provisioning` | Spec exists; executor hasn't reported observed state yet. |
+| `configuring` | Executor is generating config / installing binaries. |
+| `starting` | Process is launching but not yet healthy. |
+| `running` | Healthy and accepting peers. |
+| `syncing` | Healthy and importing blocks. |
+| `stopping` | Stop in progress. |
+| `stopped` | `desiredState = stopped` and observed matches. |
+| `error` | One or more processes crashed or failed health checks. |
+| `deleting` | Delete in progress; teardown not finished. |
+
+Phases come from `getDerivedNodePhase()` in `@vos/protocol`, computed from desired state, observed status, and revision drift. They are *displayed*, not written — the executor only ever pushes raw `ObservedNodeStatus` per process.
+
+## Permissions
+
+Lifecycle actions and delete require **owner** or **admin**. Members can only read. See [Roles and permissions](/en/platform/roles-and-permissions).

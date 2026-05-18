@@ -1,0 +1,63 @@
+---
+title: "Bitcoin"
+description: "Bitcoin Core (`bitcoind`) — networks, ports, resource defaults, and config overrides"
+---
+
+Bitcoin runs as a single `bitcoind` process per node. The chain adapter renders one `bitcoin.conf` file (INI sectioned) and starts the daemon directly. Networks supported: `mainnet`, `test`, `signet`.
+
+## Networks and resources
+
+| Network | CPU | RAM | Disk | Notes |
+| --- | --- | --- | --- | --- |
+| `mainnet` | 2 cores | 4 GiB | 600 GiB | Production network |
+| `test` | 2 cores | 4 GiB | 600 GiB | Testnet — same disk budget for safety margin |
+| `signet` | 1 core | 2 GiB | 20 GiB | Tiny — for dev / smoke testing |
+
+Defaults are pre-filled in the deploy wizard; lower with caution.
+
+## Ports
+
+| Network | P2P | RPC |
+| --- | --- | --- |
+| `mainnet` | `8333` | `8332` |
+| `test` | `18333` | `18332` |
+| `signet` | `38333` | `38332` |
+
+Ports are picked from the chain adapter's network config (`bitcoin/index.ts`). Bind addresses, data dir, and RPC bindings are platform-managed and not user-overridable.
+
+## Node types
+
+Only **Full** today. Archive isn't a separate node type for Bitcoin Core in the way it is for EVM chains; for archival use cases set `txindex=true` and a large `dbcache` via overrides.
+
+## Config overrides
+
+Overrides go into `bitcoin.conf`. The schema declares:
+
+- **Managed keys** — anything controlling networking (`bind`, `rpcbind`), data layout (`datadir`), or RPC auth — rejected at validate time.
+- **Known keys** — common tuning knobs the UI renders with type hints + descriptions:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `dbcache` | number | Database cache size in MiB |
+| `maxconnections` | number | Maximum peer connections |
+| `txindex` | boolean | Maintain a full transaction index |
+| `prune` | number | Prune mode: target block-storage size in MiB |
+| `blockfilterindex` | boolean | Maintain block filter index |
+| `peerblockfilters` | boolean | Serve compact block filters |
+| `coinstatsindex` | boolean | Maintain coinstats index |
+| `mempoolfullrbf` | boolean | Accept full replace-by-fee in mempool |
+| `assumevalid` | string | Block hash to assume valid (skip script verification before) |
+| `par` | number | Script verification threads |
+| `maxmempool` | number | Mempool size limit (MiB) |
+
+Free-form keys not on the managed list are accepted as-is. CLI arg overrides are not used for Bitcoin (no `args:` schema).
+
+## Metrics
+
+The adapter scrapes `bitcoind`'s JSON-RPC for height, peers, and verification progress, and reports them on every reporter tick. See [Node monitoring](/en/nodes/monitoring) for what's surfaced.
+
+## Common patterns
+
+- **Pruned node** — set `prune=550` (or higher) in overrides; lower the disk request to match.
+- **Full archival index** — set `txindex=true` plus `dbcache=4096` (or higher) for index build performance; expect significantly larger disk usage during the rebuild.
+- **High-RPC throughput** — raise `maxconnections` and `dbcache`; consider running the RPC client off-host and exposing the RPC port through your own reverse proxy.

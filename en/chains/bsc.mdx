@@ -1,0 +1,62 @@
+---
+title: "BSC"
+description: "BNB Smart Chain (BSC `geth` fork) — networks, ports, resource defaults, and CLI overrides"
+---
+
+BSC nodes run as a single process: BNB Chain's `geth` fork. The chain adapter installs the binary or container image, configures CLI flags, and downloads the genesis block from the BNB Chain release archive on first start.
+
+## Networks and resources
+
+| Network | Chain ID | CPU | RAM | Disk |
+| --- | --- | --- | --- | --- |
+| `mainnet` | 56 | 4 cores | 16 GiB | 500 GiB |
+| `chapel` | 97 | 4 cores | 16 GiB | 500 GiB |
+
+Lower with caution; the wizard surfaces a warning under defaults.
+
+## Ports
+
+| Name | Port | Notes |
+| --- | --- | --- |
+| RPC (HTTP) | `8545` | JSON-RPC |
+| RPC (WebSocket) | `8546` | WS JSON-RPC |
+| P2P | `30311` | DevP2P |
+| Metrics | `6060` | Geth metrics endpoint |
+
+## Node types
+
+**Full** and **Archive** are both supported. Archive needs significantly more disk (typically 2–4× the Full default) — set the disk request accordingly in the deploy wizard.
+
+## Config overrides
+
+BSC uses **CLI argument overrides** (no config file). The adapter exposes one process: `geth`. Each chain adapter declares two flag sets:
+
+- **Managed flags** (`BSC_GETH_MANAGED_FLAGS`) — `--datadir`, `--http.addr`, `--http.port`, `--ws.addr`, `--ws.port`, `--port`, `--metrics`, etc. Rejected if you try to override.
+- **Known flags** — empty for BSC; any other flag is accepted as a free-form passthrough.
+
+To override, add entries to the `args.geth` map for the node — e.g. `--cache=8192`, `--syncmode=full`. The adapter merges your flags into the managed list and starts `geth` with the union.
+
+## Init steps
+
+On first reconcile for a network, the adapter downloads the genesis archive from BNB Chain's release page (`mainnet.zip` / `testnet.zip`) and unpacks it into the data directory. Subsequent restarts skip this step.
+
+## Metrics
+
+Scraped from `geth`'s `:6060/debug/metrics/prometheus` endpoint. Included:
+
+- Block height, latest known block, sync progress.
+- Peer count.
+- DB size, chain head age.
+- CPU + memory at the process level.
+
+See [Node monitoring](/en/nodes/monitoring).
+
+## Snapshot bootstrapping
+
+BSC mainnet sync from genesis is slow. For production use, BNB Chain publishes pre-synced snapshots; you can use them by:
+
+1. Stopping the node.
+2. Replacing the data directory contents with the unpacked snapshot.
+3. Starting the node — `geth` will catch up from the snapshot's height.
+
+There is no built-in snapshot fetcher for BSC in the adapter today; this is a manual step on the host.

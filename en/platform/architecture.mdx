@@ -1,0 +1,49 @@
+---
+title: "Architecture"
+description: "How the control plane, executors, and adapters fit together"
+---
+
+Novacula is built around three pieces: a SaaS **control plane**, one or more **executors** running on your infrastructure, and **chain adapters** that translate user intent into the concrete commands each blockchain client needs.
+
+## Components
+
+| Component | Where it runs | Responsibility |
+| --- | --- | --- |
+| Control plane | Novacula cloud | Stores desired-state specs, serves the UI and GraphQL API, holds executor capabilities |
+| Executor — [Agent](/en/executors/agent-bare-metal) | Your bare-metal hosts | Reconciles specs into `systemd` services |
+| Executor — [Operator](/en/executors/operator-kubernetes) | Your Kubernetes clusters | Reconciles specs into `ConfigMap` + `StatefulSet` |
+| Chain adapter | Inside each executor | Per-chain logic — config files, CLI args, ports, resource defaults, init steps |
+
+## Connectivity
+
+Executors are the only side that initiates connections. They open outbound HTTPS to the control plane on a polling interval, fetch any specs assigned to them, push logs and status, and acknowledge revisions.
+
+The control plane never reaches into your infrastructure. You don't need to expose inbound ports, run any platform-side agents, or open VPN tunnels.
+
+<Info>
+Outbound-only is the default and only mode. There is no "control-plane-pushes" alternative.
+</Info>
+
+## Desired-state lifecycle
+
+Every node has a spec with a monotonically increasing **revision**. The flow is:
+
+1. A user edits a node in the UI — wizard, lifecycle action, upgrade — which writes a new revision to the control plane.
+2. The next time the target executor polls, it receives the new spec.
+3. The executor's chain adapter translates the spec into concrete changes (start/stop a `systemd` unit, update a `StatefulSet`, rewrite a config file).
+4. The executor pushes back the revision it is now serving.
+
+If a node is seen at a revision older than the latest, the UI surfaces drift. See [Desired-state model](/en/platform/desired-state-model).
+
+## Two backends, one interface
+
+The Agent and the Operator are two implementations of the same `ChainAdapter` interface. A node spec is meaningful under either — you can run a development node on a bare-metal host with the Agent and the same chain/client/version in production through the Operator on Kubernetes.
+
+The chain adapter is what guarantees that. It owns:
+
+- The canonical set of CLI flags or config-file keys for each client.
+- Which keys are user-overridable and which are platform-managed.
+- Per-network defaults for resources and ports.
+- Init steps (genesis download, JWT generation, archive checkpoint URLs, ...).
+
+See [Execution backends](/en/platform/execution-backends) for what each backend does differently, and [Chains and networks](/en/platform/chains-and-networks) for how chains, networks, roles, and clients are modeled.

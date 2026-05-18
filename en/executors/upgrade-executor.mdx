@@ -1,0 +1,65 @@
+---
+title: "Upgrade an executor"
+description: "Request an upgrade from the UI; the executor self-applies and reports the new version"
+---
+
+Upgrading an executor swaps its binary (Agent) or container image (Operator) to a newer release. The upgrade is initiated from the control plane UI and applied by the executor itself on its next poll — you don't have to run anything by hand on the infrastructure side.
+
+## Prerequisites
+
+- A role with deploy permission: **owner** or **admin**.
+- The executor must be **online** at request time.
+- The target release must appear in the executor's **available upgrades** list (filtered by channel and major-hop limits — see below).
+
+## How available upgrades are computed
+
+The control plane keeps a global catalog of `ExecutorRelease` rows. Each release has a `kind` (`agent` or `operator`), `version`, `channel` (`stable` / `beta` / `dev`), and a signed download artifact.
+
+For a given executor, the **available upgrades** list is:
+
+1. Releases of the matching `kind`.
+2. On the executor's declared **channel** (or wider — `dev` sees `beta` and `stable`, `beta` sees `stable`).
+3. With status `published`.
+4. Filtered by **major-hop reachability**: the only releases marked `allowedAsDirectTarget = true` are those at most one major version away from the executor's current version. Reaching a release further out requires hopping through the intermediate major first; the UI labels the unreachable rows with `requires upgrade to N.x first`.
+
+## Steps
+
+<Steps>
+  <Step title="Open the executor detail page">
+    From **Executors** → pick your row. The **Upgrade** panel shows the current version, channel, and the candidate list.
+  </Step>
+  <Step title="Pick a target release">
+    Available upgrades show release notes and a Compare-style version diff. Downgrades work the same way (and live under **Available downgrades**) — useful for rollbacks while a regression is being investigated.
+  </Step>
+  <Step title="Confirm">
+    The control plane writes a `pendingUpgrade` blob onto the `Executor` row. The blob is a discriminated `AgentUpgradeSpec` or `OperatorUpgradeSpec` — discriminated by `executor.kind` — carrying the download URL, SHA-256, signature, and target version.
+
+    The blob has a TTL (`PENDING_UPGRADE_TTL_MS`); if the executor doesn't pick it up before then, it's discarded as stale and you'll need to re-request.
+  </Step>
+  <Step title="Wait for the executor to apply">
+    On its next `syncExecutor` (every 5s by default), the executor sees the pending upgrade and self-applies:
+
+    - **Agent** — downloads the binary, verifies SHA-256, verifies the [minisign](https://jedisct1.github.io/minisign/) signature against keys baked into the running binary, hardlinks the current binary as `<current>.prev`, atomic-renames the new binary into place, and `systemctl restart`s. If the new binary fails to start within the `StartLimitBurst` window, the `OnFailure=novacula-agent-rollback.service` unit kicks in and restores `.prev`.
+    - **Operator** — patches its own `Deployment` to use the new image. A self-update monitor watches for `ImagePullBackOff` / `CrashLoopBackOff` and rolls back the image patch if the new one doesn't come up cleanly.
+
+    The new process reports its version on the next `syncExecutor`. The control plane sees the version match and clears `pendingUpgrade`.
+  </Step>
+  <Step title="Confirm new version">
+    The executor row's `currentVersion` flips to the target. Capabilities are re-declared on the same call, so any newly-supported chains, clients, or versions become deploy-able immediately.
+  </Step>
+</Steps>
+
+## Out-of-support executors
+
+If your executor is more than one major version behind the control plane, it's flagged **out-of-support**. `nodes` queries return `409`, but `syncExecutor` and the upgrade channel keep working — that's deliberate, so you can drag a stuck executor forward without manual intervention.
+
+The upgrade may need to happen in two hops if you're more than one major behind. The UI shows the next reachable major in the candidate list.
+
+## Rollback
+
+If the upgrade went wrong but the executor is still alive, request a downgrade the same way — the `availableDowngrades` list shows older releases reachable from where you currently sit.
+
+If the upgrade left the executor wedged:
+
+- **Agent** — the systemd `OnFailure=` rollback should have already restored the previous binary. If not, see [Apply executor upgrades](/en/infrastructure/apply-upgrades) for manual recovery.
+- **Operator** — the self-update monitor should have rolled the image patch back. If not, edit the `Deployment`'s image manually and the operator will resume.

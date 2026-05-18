@@ -1,0 +1,91 @@
+---
+title: "Operator (Kubernetes)"
+description: "The Novacula Operator — a Kubernetes controller that materializes nodes as ConfigMaps and StatefulSets"
+---
+
+The **Operator** is one of the two execution backends. It runs as a single-replica `Deployment` inside your Kubernetes cluster, watches a custom resource called `BlockchainNode`, and renders each one into a `ConfigMap` (the node's config files) plus a `StatefulSet` (the node's pod template + persistent volume claims).
+
+For the bare-metal Agent, see [Agent (bare-metal)](/en/executors/agent-bare-metal).
+
+## When to use
+
+- You already operate a Kubernetes cluster (especially with a fast CSI provider — local NVMe, AWS gp3, GCP pd-ssd).
+- You want pod-level isolation between unrelated nodes.
+- You want native PVC handling for storage and standard `kubectl` introspection.
+- Your platform team prefers Helm-based installs over per-host daemons.
+
+If you don't have a cluster ready, the Agent gets you running on a single Linux host without standing one up.
+
+## Requirements
+
+- **Kubernetes** — 1.27 or newer.
+- **CRD permissions** — the operator auto-applies its CRD on startup, so the install user needs `customresourcedefinitions` write at least once. Subsequent upgrades only need namespace-scoped permissions.
+- **A namespace** — defaults to `novacula-system`. Override via `NOVACULA_OPERATOR_NAMESPACE`.
+- **A storage class** with `WaitForFirstConsumer` binding for the node PVCs; the operator probes available classes on startup and reports them in [executor capabilities](/en/executors/executor-capabilities).
+- **Outbound HTTPS** from the operator pod to the control plane URL.
+
+## What the operator deploys
+
+When the control plane assigns a node spec to this executor:
+
+1. The operator creates / updates a `BlockchainNode` custom resource (CRD `validatoros.com/v1alpha1`, kind `BlockchainNode`, scope `Namespaced`, short name `bn`).
+2. Its own controller loop converts the CR's `spec` into:
+   - A **`ConfigMap`** carrying the rendered config files for each process.
+   - A **`StatefulSet`** with one pod per node, containing one container per role (e.g. `el` + `cl` for Ethereum), plus any sidecar or init containers the chain adapter requires.
+   - **`PersistentVolumeClaim`** templates from the spec's `storage` block, claimed against the configured `StorageClass`.
+   - A headless **`Service`** for stable pod-DNS and per-node port routing.
+3. Kubernetes does the rest — schedule, mount volumes, pull images, run init containers, start the main containers.
+
+The operator's `status` collector polls each pod's metrics endpoint, builds an `ObservedNodeState`, and writes it back through `syncExecutor`. The CR's `.status.phase` (`Pending` → `Configuring` → `Running` → `Syncing` → `Stopped` / `Error`) tracks the same lifecycle.
+
+## Two reconcile layers
+
+The operator is two cooperating loops:
+
+- **Outer loop** — same as every executor: poll the control plane, write/update the `BlockchainNode` CR per assigned node spec.
+- **Inner loop** — Kubernetes-style controller that watches `BlockchainNode` CRs and converges the cluster state to match. This is what lets you (or another tool) introspect `kubectl get bn -A` and trace exactly what the operator is doing.
+
+Both loops are **convergent** — each tick recomputes the diff from scratch. A partial apply heals on the next tick; a wedged pod doesn't poison subsequent reconciles.
+
+## Self-update
+
+When the control plane sets a `pendingUpgrade` on this executor's row, the operator:
+
+1. Probes the target image's registry to confirm the tag exists and is pullable.
+2. Patches its own `Deployment` to the new image.
+3. Watches the rollout. If it sees `ImagePullBackOff` or `CrashLoopBackOff` on the new replicaset within the monitor window, it patches the image back to the prior tag (logged via `failure-classify.ts` so the operator can tell why it rolled back).
+4. The new pod reports its version on the next `syncExecutor`; the control plane clears `pendingUpgrade`.
+
+The chart deploys exactly one operator replica — Kubernetes lease-style coordination is unnecessary because the control plane is the single source of truth for which executor owns which node.
+
+## Bring-up flow
+
+1. Issue an `operator`-kind API key from the UI: see [Connect an executor](/en/executors/connect-an-executor).
+2. `helm install` the chart, passing `controlPlaneUrl` and the API key (typically as a `Secret`).
+3. The operator pod starts, applies the CRD, calls `syncExecutor`, declares its capabilities.
+4. The executor row in the UI flips to `online` within seconds.
+
+Walkthrough: [Provision an executor on Kubernetes](/en/infrastructure/provision-on-kubernetes).
+
+## Inspect with kubectl
+
+Useful commands once you're running:
+
+```bash
+# Operator pod logs
+kubectl logs -n novacula-system deploy/novacula-operator -f
+
+# All blockchain-node CRs
+kubectl get blockchainnodes -A
+kubectl get bn <name> -o yaml          # full CR with status
+
+# Per-node assets
+kubectl get statefulset,configmap,svc,pvc -l novacula.com/node=<name>
+kubectl logs -l novacula.com/node=<name> -c <role>
+```
+
+## See also
+
+- [Provision an executor on Kubernetes](/en/infrastructure/provision-on-kubernetes) — Helm install walkthrough.
+- [Environment variables](/en/reference/environment-variables) — operator-side env vars.
+- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — manual recovery if a self-update wedges.

@@ -1,0 +1,56 @@
+---
+title: "Roles and permissions"
+description: "Organization roles (owner, admin, member) and the system admin — what each can do"
+---
+
+Novacula has two layers of access control: **organization roles** for tenant-scoped work, and a separate **system role** for platform operators. CASL evaluates the active session against both layers on every request.
+
+## Organization roles
+
+Every member of an organization holds exactly one role. Roles live on the `Member` row and follow [better-auth's organization plugin](https://www.better-auth.com/docs/plugins/organization).
+
+| Role | What they can do |
+| --- | --- |
+| **owner** | Everything in the org. Manage members (including admins), rotate API keys, deactivate the org, every action below. |
+| **admin** | Manage members below their level, manage executors and nodes, configure notifications, create/rotate API keys. Cannot remove or demote the owner. |
+| **member** | Read-only access to all org-scoped resources: executors, nodes, events, alert incidents, webhook deliveries, notification settings. |
+
+Roles are mutually exclusive within an org. A user who needs different permissions for different orgs needs separate org memberships.
+
+## System role
+
+A separate `role` field on the `User` row controls platform-level access:
+
+- **`admin`** (system admin) — sees all orgs, can impersonate any user, can deactivate organizations, can publish executor releases. Granted exclusively by other system admins.
+- **(unset)** — default; behavior is controlled entirely by org membership.
+
+System admin is independent of org membership. A system admin who is not a member of org X has admin powers there too, by virtue of the system role.
+
+## What requires which role
+
+| Action | Required role |
+| --- | --- |
+| View executors, nodes, events, incidents | Any org role |
+| Create / rotate / revoke API keys | owner, admin |
+| Connect a new executor | owner, admin |
+| Deploy a node, edit config, lifecycle actions, delete | owner, admin |
+| Request executor / node upgrades | owner, admin |
+| Configure org-wide notifications + webhook | owner, admin |
+| Invite a member, change member role | owner (for any role); admin (for member ↔ admin only) |
+| Remove a member | owner; admin (cannot remove owner or other admins) |
+| Deactivate the org | owner |
+| Publish executor releases | system admin |
+| Impersonate a user | system admin |
+| Deactivate any org from the admin console | system admin |
+
+## How the platform enforces it
+
+- **Authentication.** All sessions go through better-auth. UI sessions are cookie-based; executors authenticate with org-scoped API keys (see [API keys](/en/account/api-keys)).
+- **Authorization.** A CASL ability is built per request from `(user.role, session.activeOrganizationId)`. Repos AND-merge `accessibleBy` filters into every Prisma query, so a query you're not allowed to run returns nothing instead of leaking rows.
+- **Tenant scope.** A non-system-admin user belongs to exactly one organization at a time. `activeOrganizationId` on the session is the single source of truth — set by login, lifted out of API key metadata for the polling client.
+
+## Inviting members
+
+Owners and admins invite members from **Members** → **Invite member**. The invitee gets an email; on accept, a `Member` row is created with the role chosen at invite time.
+
+See [Members and invitations](/en/account/members-and-invitations) for the full flow.

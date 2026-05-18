@@ -1,0 +1,49 @@
+---
+title: "Manage your organization"
+description: "Create, switch, rename, and deactivate an organization"
+---
+
+An **organization** is the tenant boundary in Novacula. Everything you create — executors, nodes, API keys, alert incidents, webhook deliveries, audit log — lives inside exactly one organization. Members of one org cannot read or change anything in another.
+
+## How organizations are created
+
+- **Personal org on signup.** When you create your account, a personal organization is created automatically and you become its **owner**. You can rename or deactivate it later, but you can't delete it.
+- **By invitation.** When someone invites you to their org via email, accepting the invite creates a `Member` row that links your user to that org with the role they chose.
+
+A regular user belongs to exactly one org at a time. (The exception is the platform-level system admin — see [Roles and permissions](/en/platform/roles-and-permissions).)
+
+## Settings
+
+Open **Organization** from the sidebar. Editable fields:
+
+- **Name** — the display name shown in headers and switcher.
+- **Slug** — the URL-safe identifier; appears in some path-style references.
+- **Logo** — optional image displayed in the sidebar header.
+
+These fields are editable by **owners** and **admins**. Member-level users see them as read-only.
+
+## Switching the active organization
+
+For users in multiple orgs (system admins, primarily), the sidebar header has an org switcher. Selecting an org calls better-auth to set `activeOrganizationId` on your session. Every tenant-scoped query — executor list, node list, events, incidents — re-reads from the new tenant immediately.
+
+## Member management
+
+Inviting, removing, and re-roling members live on a separate page. See [Members and invitations](/en/account/members-and-invitations).
+
+## Deactivation
+
+Owners can **deactivate** an organization from the org settings page. Deactivation:
+
+- Marks the org as inactive without deleting any data.
+- Disables logins through it (members can no longer set it active).
+- Disables `syncExecutor` calls under any of its API keys — connected executors will go offline within `HEARTBEAT_TIMEOUT_MS` (30s default).
+
+A deactivated org can be reactivated by a system admin. Until then, the underlying executors and nodes still exist on your infrastructure — they're simply orphaned from the control plane and will idle in their last reconciled state.
+
+<Warning>
+Deactivation does not stop blockchain processes you've already deployed. To cleanly tear down infrastructure, stop and delete the nodes from the UI first, then deactivate the org.
+</Warning>
+
+## Audit log
+
+Every org-level mutation (rename, member change, executor delete, node lifecycle action, ...) is recorded in the **AuditAction** table. The audit log is scoped to the org and visible to owners and admins under **Settings** → **Audit log**.

@@ -1,0 +1,55 @@
+---
+title: "Organizing nodes"
+description: "Find and organize nodes in long lists — search, filter by chain / phase / executor, and what's planned"
+---
+
+The **Nodes** list is your starting point for everything node-related across the org. As fleets grow, finding the right node fast matters. Today the list supports free-text search and three structured filters; user-defined groups and tags are on the roadmap.
+
+## Free-text search
+
+The search field at the top of the list matches against the node **name**. Matches are partial and case-insensitive; the URL updates as you type so a search is shareable.
+
+## Filters
+
+Three filters live next to the search box. Each is independent; combine them freely.
+
+### By chain
+
+Constrain to one of the supported chains: Bitcoin, BSC, Ethereum, Sui, Tron. The dropdown only shows chains for which you have at least one node.
+
+### By phase
+
+Constrain to one of the [computed lifecycle phases](/en/nodes/node-lifecycle#state-machine):
+
+- `provisioning` — spec exists, no observed state yet.
+- `configuring`, `starting`, `syncing`, `running` — healthy progressions.
+- `stopping`, `stopped` — quiesced.
+- `error` — process down or crashed.
+- `deleting` — teardown in progress.
+
+This is the most useful filter for ops triage — everything that's `error` or stuck `provisioning`.
+
+### By executor
+
+Constrain to nodes hosted by one specific executor. Useful when investigating an executor's behavior or planning a migration off a host.
+
+## Sort
+
+The default sort is by **name**, ascending. Click any column header to switch. Sort is purely client-side over the loaded page.
+
+## Clearing filters
+
+The active filters render as removable chips above the table. **Clear all** wipes the URL of filter params; bookmarking the URL of a particular filter combo gives you a one-click view back.
+
+## What about user-defined groups and tags?
+
+There is currently **no first-class tag or group field** on the `Node` model. Two patterns we see in the wild:
+
+1. **Encode taxonomy in the name.** `eth-mainnet-prod-01`, `eth-mainnet-canary-02`. Search + chain filter handles this well.
+2. **Use the executor as the group.** A "group" of nodes is just the set hosted on the same executor — already filterable.
+
+First-class **tags** (key/value labels you can apply per node and filter on) are planned. Until they ship, the patterns above cover most fleet-organization use cases.
+
+## API
+
+The same filters are available on the GraphQL `nodes` query — see [GraphQL API](/en/reference/graphql-api).

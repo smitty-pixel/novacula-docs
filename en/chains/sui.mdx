@@ -1,0 +1,73 @@
+---
+title: "Sui"
+description: "`sui-node` — networks, ports, resource defaults, and `fullnode.yaml` overrides"
+---
+
+Sui nodes run as a single `sui-node` process per node. The chain adapter renders one `fullnode.yaml` (nested-dict format), downloads the genesis blob from the official Sui repository on first start, and points the node at network-specific archive and P2P seed lists.
+
+## Networks and resources
+
+| Network | CPU | RAM | Disk |
+| --- | --- | --- | --- |
+| `mainnet` | 16 cores | 128 GiB | 4000 GiB |
+| `testnet` | 8 cores | 64 GiB | 3000 GiB |
+
+Sui defaults are heavy because the network's state grows fast and pruning is configurable rather than aggressive. Lower at your own risk; the wizard surfaces a warning under defaults.
+
+## Ports
+
+| Name | Port | Notes |
+| --- | --- | --- |
+| JSON-RPC | `9000` | Public read API |
+| Network (TCP) | `8080` | Inter-validator RPC |
+| P2P (UDP, QUIC) | `8084` | Discovery / gossip |
+| Metrics | `9184` | Prometheus exporter |
+
+## Node types
+
+**Full** only. Sui doesn't expose a separate archive mode; for archival use cases adjust pruning via overrides (see below).
+
+## Init steps
+
+On first reconcile per node:
+
+1. **Genesis blob** — downloaded from `github.com/MystenLabs/sui-genesis/raw/main/<network>/genesis.blob` and written to the data dir.
+2. **P2P seeds** — written into `fullnode.yaml` from the adapter's network-specific seed map. These are pinned validator-network endpoints (e.g. `mel-00.mainnet.sui.io`, `ewr-00.mainnet.sui.io`).
+3. **Archive ingestion URL** — pointed at `https://checkpoints.<network>.sui.io` for state-sync from the Mysten-operated archive.
+
+## Config overrides
+
+Overrides go into `fullnode.yaml` (nested dict). The schema declares:
+
+- **Managed paths** — anything controlling networking (`network-address`, `metrics-address`, `json-rpc-address`), data layout (`db-path`), genesis path, and seeds. Rejected at validate time.
+- **Known keys** — common tuning knobs the UI renders with type hints + descriptions:
+
+| Key | Type | Description |
+| --- | --- | --- |
+| `enable-event-processing` | boolean | Enable event indexing/processing |
+| `authority-store-pruning-config.num-epochs-to-retain` | number | Epochs of history to retain in the store |
+| `authority-store-pruning-config.num-epochs-to-retain-for-checkpoints` | number | Epochs of checkpoints to retain |
+| `authority-store-pruning-config.periodic-compaction-threshold-days` | number | Days between RocksDB compactions |
+| `state-archive-read-config` | string | Override archive ingestion-url config (advanced) |
+
+Free-form keys not on the managed list are accepted as-is. Sui doesn't use CLI arg overrides; everything flows through `fullnode.yaml`.
+
+## Metrics
+
+Scraped from the `sui-node` Prometheus exporter on `:9184`. Surfaced:
+
+- Current checkpoint, current epoch.
+- Peer count.
+- Process CPU + memory, disk usage.
+
+See [Node monitoring](/en/nodes/monitoring).
+
+## Common patterns
+
+- **Public RPC node** — accept defaults; expose `:9000` through your own reverse proxy.
+- **Long-history node** — bump `num-epochs-to-retain` and `num-epochs-to-retain-for-checkpoints` substantially; expect proportional disk growth.
+- **Lean node (events off)** — set `enable-event-processing: false`; the node won't index events but uses materially less disk.
+
+## Performance note
+
+Sui benefits more from fast NVMe than from raw CPU count — the bottleneck is RocksDB. If your storage class doesn't deliver consistent low-latency writes (cloud burst-credit volumes, network filesystems), expect periodic stalls regardless of CPU/RAM headroom.

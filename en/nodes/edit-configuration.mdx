@@ -1,0 +1,57 @@
+---
+title: "Edit node configuration"
+description: "Change resources and config-file or CLI overrides on a running node"
+---
+
+After deploy, the node detail page's **Configuration** tab shows the active spec read-only and an **Edit** action that walks you through the same forms as the [Deploy node wizard](/en/nodes/deploy-a-node), pre-filled with the current values.
+
+## What you can edit
+
+| Field | Editable | Note |
+| --- | --- | --- |
+| Chain, network, node type | No | Pick at deploy; never changes for a given node. |
+| Client choice (e.g. `geth` vs `reth`) | No | Switching client = redeploy. |
+| Client version | Via [Upgrade a node](/en/nodes/upgrade-node) | Has its own dedicated flow. |
+| **CPU / RAM / disk requests + limits** | Yes | New values take effect on the next reconcile. Disk size can be **increased** but not decreased. |
+| **Storage class** (Operator only) | No | Storage class is bound at PVC creation. |
+| **Config-file overrides** | Yes | Per-process file (`bitcoin.conf`, `fullnode.yaml`, `config.conf`). Validated against the chain adapter's whitelist. |
+| **CLI argument overrides** | Yes | Per-process flag list. Validated against the chain adapter's managed-flag set. |
+| **`checkpoint-sync-url`** (Ethereum CL) | Yes | First-class field on Ethereum CL clients; fast-syncs from a trusted checkpoint. |
+
+## How edits flow
+
+1. You submit the form. The control plane validates against the executor's [capabilities](/en/executors/executor-capabilities) and the chain adapter's `configOverrideSchema`.
+2. A new `Node.spec` revision is written.
+3. The executor sees the new revision on its next poll.
+4. Reconciler diffs and applies:
+   - **Resource changes only** — `kubectl patch sts` (Operator) or `systemctl set-property` (Agent best-effort). On Operator, this triggers a rolling restart of the pod.
+   - **Config or arg changes** — regenerate the config file, restart the affected process so it re-reads.
+   - **Disk grow** — Operator: PVC `requests.storage` is patched; the underlying CSI must support online resize. Agent: just bookkeeping (the data dir is the host's filesystem).
+5. `node.lifecycle.transition` events are written as processes go through `stopping` → `starting` → `running` again.
+
+## Override validation
+
+Every chain adapter ships a `ConfigOverrideSchema` describing two override surfaces:
+
+- **`files`** — for chains where config lives in a config file (Bitcoin, Sui, Tron). The schema lists `managedPaths` (keys the platform owns — data-dir, RPC bindings, ports — rejected if you try to override) and `knownKeys` (commonly-tuned keys with type hints + descriptions, rendered with helpful UI).
+- **`args`** — for chains where config is CLI flags (Ethereum, BSC). The schema lists `managedFlags` per process (rejected if overridden) and `knownFlags` per process (typed + described).
+
+Submitting a managed key or flag returns `invalid_node_config` with the offending entries enumerated.
+
+<Tip>
+Anything *not* on the managed list and not on the known list is still accepted as a free-form override — the platform passes it through. The known-keys list is for UX, not gating.
+</Tip>
+
+## Capacity warnings
+
+If you lower CPU, RAM, or disk below the per-network defaults from the chain adapter, the form surfaces a **non-blocking** warning. Submission still succeeds; you'll see warnings on the node detail page until you raise the requests, and the node may show reconciliation churn or stalled sync if the budget really is too tight.
+
+## What edits don't do
+
+- They don't trigger a re-sync from genesis. The data directory is preserved across restarts.
+- They don't move the node to a different executor. That requires delete + redeploy.
+- They don't change the node's identity. The `name` and `id` stay the same; only the spec evolves through revisions.
+
+## Permissions
+
+**owner** and **admin**. Members see the form but can't submit. See [Roles and permissions](/en/platform/roles-and-permissions).

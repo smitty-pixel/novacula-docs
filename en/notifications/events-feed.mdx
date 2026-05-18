@@ -1,0 +1,79 @@
+---
+title: "Events feed"
+description: "The cross-resource event stream — what gets recorded, how to read it, and how long it sticks around"
+---
+
+The **Events feed** is a chronological log of everything significant that happens inside an organization — executors connecting and disconnecting, nodes being deployed, lifecycle actions, runtime errors reported by the executor, and audit-worthy mutations. Think of it as the platform's `git log`: complete, queryable, and the canonical source for "what happened, when, and who did it."
+
+## Two sources
+
+Each event row carries a `source` field:
+
+- **`control_plane`** — written by the control plane itself when a user (or system) triggers a mutation. Examples: a deploy, a config edit, an executor delete.
+- **`runtime`** — written by an executor via `reportRuntimeEvents` when something happens on the infrastructure side that the platform should know about. Examples: process crash, sync error, init step failure.
+
+The feed merges both sources into one timeline.
+
+## Event types
+
+| Type | Source | When |
+| --- | --- | --- |
+| `executor.connected` | control_plane | First successful sync after the executor was created |
+| `executor.reconnected` | control_plane | First sync after a stale period |
+| `executor.disconnected` | control_plane | Heartbeat timeout exceeded (~30s of silence) |
+| `executor.deleted` | control_plane | Executor row removed |
+| `node.created` | control_plane | Deploy completed |
+| `node.deleted` | control_plane | Node removed |
+| `node.lifecycle.requested` | control_plane | User triggered start / stop / restart |
+| `node.lifecycle.transition` | control_plane | Observed status crossed a threshold |
+| `runtime.event` | runtime | Free-form runtime event from the executor |
+
+## Anatomy of an entry
+
+Each row carries:
+
+- **Source + type** — see table above.
+- **Level** — `info`, `warn`, `error`. Used by the UI to color the row.
+- **Message** — short human-readable summary.
+- **Subject refs** — `executorId` / `executorName` / `nodeId` / `nodeName` so the row links back to the right detail page.
+- **`createdAt`** — server-side timestamp.
+- **`payloadJson`** — optional structured payload (lifecycle action name, transition details, runtime stack trace, ...).
+- **`auditActionId`** — when the event was triggered by an audited mutation, links to the matching row in the audit log.
+
+## Filtering
+
+The events page supports filters by:
+
+- **Executor name**
+- **Node name**
+- **Level** — `info` / `warn` / `error`
+- **Cursor + direction** — keyset pagination going forward or backward in time
+
+Default page size is 100, max 500. Filters compose; URL reflects active filters for shareability.
+
+## Retention
+
+Events are retained per organization with two simultaneously-applied caps:
+
+- **`EVENT_RETENTION_DAYS`** — default 90 days. Older events are pruned.
+- **`EVENT_RETENTION_MAX_PER_ORG`** — default 100 000. Beyond this cap, the oldest events are pruned.
+
+Retention sweeps run on a 60-second background timer. Only `source = runtime` events are pruned by these limits — control-plane events (audit-relevant) are kept until a future explicit retention policy moves them.
+
+## Audit log vs events feed
+
+Two separate but related streams:
+
+- **Events feed** — chronological view, useful for ops triage. Includes runtime events the executor reports.
+- **Audit log** — strict who-did-what record for compliance. Each audit row carries actor, target, outcome, IP, user agent. Lives in its own table (`AuditAction`).
+
+Many control-plane events have a corresponding audit row — the events feed links to it via `auditActionId`. Use audit when you need provenance ("who changed this?"); use events when you need timeline ("when did the executor go down?").
+
+## API access
+
+The events feed is exposed as the `events` GraphQL query. Same filter shape as the UI; pagination via cursor. See [GraphQL API](/en/reference/graphql-api).
+
+## Related
+
+- [Alert rules](/en/notifications/alert-rules) — fire notifications based on event-derived state.
+- [Webhooks](/en/notifications/webhooks) — push events out to your own systems.

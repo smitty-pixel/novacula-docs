@@ -1,0 +1,59 @@
+---
+title: "Sessions and security"
+description: "How sessions work, how to revoke them, and how to recover when you lose access"
+---
+
+A **session** is a credential issued to a single browser, IDE, or programmatic client after a successful login. It carries the user identity plus the **active organization** the session is currently scoped to. Every UI action and every GraphQL query reads its tenant scope from the session.
+
+## Where sessions live
+
+Sessions are stored on the `Session` table in the control plane. Each row carries:
+
+- `userId` and `activeOrganizationId`.
+- `expiresAt` — sliding expiry; refreshes on activity.
+- `ipAddress` and `userAgent` — populated from the request that created the session.
+- `impersonatedBy` — set when a system admin is acting as another user.
+
+API keys are *not* sessions. See [API keys](/en/account/api-keys) for that flow.
+
+## Viewing your sessions
+
+Open **Account** → **Sessions**. Each row shows IP, user agent, created-at, last-active, and a marker for the session you're viewing right now. Use **Revoke** to terminate any session immediately — useful for shared devices, lost laptops, or an unrecognized entry.
+
+You cannot revoke your *current* session from this panel; log out instead.
+
+## Switching active organization
+
+When you select a different org from the org switcher, better-auth updates `activeOrganizationId` on the same session. The session token doesn't change; only its tenant scope. Tabs you have open on the old org will start returning data from the new one on the next refetch.
+
+## Logout
+
+Logout deletes the current session row and clears the cookie. Other devices stay logged in until you revoke them or they expire on their own.
+
+## Password reset
+
+If you've lost your password:
+
+1. From the login screen, click **Forgot password**.
+2. Enter the email tied to your account. A reset link is emailed (the email always confirms send, regardless of whether the address is registered, to avoid leaking account existence).
+3. Open the link and set a new password.
+
+A successful reset:
+
+- Updates the password hash on your `Account` row.
+- Does **not** auto-revoke existing sessions. If you suspect compromise, revoke all sessions from the panel after logging in.
+
+## When a system admin impersonates you
+
+A system admin can impersonate any user from the admin console. While impersonating:
+
+- A new session is created with `impersonatedBy` set to the admin's user id.
+- All actions are recorded in the audit log under the admin's identity, not yours.
+- Impersonation sessions show up in your sessions list with a clear marker so you can revoke them yourself if you ever see one you didn't expect.
+
+## Session security checklist
+
+- Revoke unrecognized sessions immediately and rotate your password.
+- Never paste session cookies into a chat or screenshot.
+- Set up SSO if your organization supports it — fewer credentials in circulation.
+- Use [API keys](/en/account/api-keys) for automation, not your personal session.

@@ -1,0 +1,82 @@
+---
+title: "Agent (bare-metal)"
+description: "The Novacula Agent — a daemon that manages node processes as systemd services on Linux hosts"
+---
+
+The **Agent** is one of the two execution backends. It's a single standalone binary written in TypeScript and compiled to a self-contained executable with `bun build --compile`. It runs as a `systemd` service and manages every blockchain node process on the host as its own `systemd` service too.
+
+For the Operator (Kubernetes) backend, see [Operator (Kubernetes)](/en/executors/operator-kubernetes).
+
+## When to use
+
+- One Linux host, or a small fleet of hosts you already manage with Ansible / Terraform / cloud-init.
+- You don't want a Kubernetes dependency for blockchain nodes.
+- The validator workload sits on dedicated hardware (typical for bare-metal colo).
+
+If you already operate Kubernetes, prefer the Operator — it gets you pod-level isolation, native PVC handling, and standard cluster ops.
+
+## Requirements
+
+- **OS** — Ubuntu 22.04+ or Debian 12+ (other glibc-based Linux distros likely work but aren't tested).
+- **Architecture** — `x86_64` or `aarch64`.
+- **Privileges** — `root` or `sudo` (the agent writes to `/etc/systemd/system` and reads `/proc`).
+- **Network** — outbound HTTPS to the control plane URL. No inbound ports needed.
+- **Storage** — a single `data_dir` (default `/var/lib/novacula`) that holds the agent's state, downloaded client binaries, per-node config, and per-node data directories. Size it for the largest chain you plan to run (e.g. Tron mainnet wants ~4 TB).
+
+## Three concurrent loops
+
+The agent runs three independent loops on a single Bun process:
+
+| Loop | Default cadence | Job |
+| --- | --- | --- |
+| **PollingClient** | 5s | Long-poll the control plane for the latest spec for every assigned node. |
+| **Reconciler** | 5s | Diff `desired` vs `observed`. Generate config, install missing client binaries, write systemd units, start/stop services. |
+| **Reporter** | 10s | Probe each node process's metrics endpoint, build an `ObservedNodeState`, write it back via `syncExecutor`. |
+
+All three are tunable from the agent TOML — see [Configuration reference](/en/reference/configuration).
+
+## How it materializes a node
+
+For each node the control plane assigns:
+
+1. **Resolve the chain adapter** for the spec's `chain`.
+2. **Generate config files** — the adapter writes one or more files into `<data_dir>/nodes/<name>/config/`.
+3. **Install client binaries** — if the chosen client+version isn't already in `<data_dir>/bin/`, download it. Install URLs come from the adapter; integrity is checked when the upstream provides hashes.
+4. **Create init steps** — for chains with init needs (Sui genesis blob, Ethereum JWT secret, Tron snapshot, ...), run the adapter's `initContainerSpecs()` once.
+5. **Write a systemd unit** per process — `<chain>-<role>@<node>.service` style. `ExecStart=` calls the client binary directly with the adapter-managed flags + user overrides.
+6. **`systemctl daemon-reload && systemctl start <unit>`**. The reconciler exits; on the next tick it'll see `observedStatus = starting`, then `running`, then `syncing`.
+
+For a single-process chain (Bitcoin, BSC, Sui, Tron) that's one unit. For Ethereum it's two — one EL, one CL — sharing the node's data directory.
+
+## The agent's own systemd unit
+
+The agent installs itself as `novacula-agent.service` plus a one-shot rollback unit:
+
+- `Restart=on-failure`, `StartLimitBurst=3` over `StartLimitIntervalSec=120`.
+- `OnFailure=novacula-agent-rollback.service` — invoked if the agent flap-budget is exhausted. The rollback unit `mv`s the previous binary (kept as `<current>.prev` after every self-update) back over the broken one and restarts.
+
+This is what makes self-updates safe: if a new binary fails to start three times in two minutes, the rollback unit takes over without operator intervention. See [Apply executor upgrades](/en/infrastructure/apply-upgrades).
+
+## Self-update
+
+When the control plane sets a `pendingUpgrade` on this executor's row, the agent:
+
+1. Downloads the new binary into a sibling temp file.
+2. Verifies SHA-256.
+3. Verifies a [minisign](https://jedisct1.github.io/minisign/) signature against trusted public keys baked into the running binary (not configurable at runtime).
+4. Hardlinks the current binary as `<current>.prev` for the rollback unit.
+5. Atomic `rename()` over the current binary.
+6. `systemctl restart novacula-agent.service`.
+
+The new binary reports its version on the next sync; the control plane clears `pendingUpgrade` once it sees the match.
+
+## CLI
+
+The agent ships with a Citty-based CLI for install, lifecycle, status, and manual upgrade. See [Agent CLI](/en/reference/agent-cli) for the full subcommand list.
+
+## See also
+
+- [Provision an executor on bare-metal](/en/infrastructure/provision-on-bare-metal) — install walkthrough.
+- [Configuration reference](/en/reference/configuration) — agent TOML schema.
+- [Environment variables](/en/reference/environment-variables) — env vars the agent reads.
+- [Connect an executor](/en/executors/connect-an-executor) — generate the API key the agent will use.

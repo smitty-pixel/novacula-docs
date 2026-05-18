@@ -1,0 +1,46 @@
+---
+title: "Manage your account"
+description: "Edit your profile, change password, and view active sessions"
+---
+
+Your **account** in Novacula is the user identity behind every action you take in the console. It is independent of any organization — you keep one account even if you join, leave, or switch between organizations.
+
+Open **Account** from the avatar menu in the top-right.
+
+## Profile
+
+Editable fields:
+
+- **Name** — shown in the events feed, member list, and audit log.
+- **Email** — the address you log in with. Changing it sends a verification message; the change takes effect once you confirm.
+- **Avatar** — optional image. Used in the member list and event entries.
+
+Only you can edit your own profile. A system admin can also rename users from the admin console — that change is recorded in the audit log.
+
+## Password
+
+Use **Change password** to rotate the password tied to your email. You'll need your current password to confirm the change. If you've lost access, see [Sessions and security](/en/account/sessions) for the password reset flow.
+
+After a password change, all your existing sessions stay valid — to terminate them, revoke them explicitly from the sessions panel.
+
+## Active sessions
+
+Every browser, IDE, or programmatic client you log into creates a **session**. The sessions panel shows:
+
+- IP address and user agent of the device.
+- Timestamps for created and last-active.
+- Whether this is the session you're currently viewing.
+
+Use **Revoke** on any row to invalidate that session immediately. Useful if you log in from a shared device and forget to log out, or if you suspect credentials were leaked.
+
+See [Sessions and security](/en/account/sessions) for the full session model and password-reset flow.
+
+## Linked accounts
+
+If your organization uses SSO or social login, the linked identity providers appear here. Unlinking a provider doesn't delete your account — it just removes that login method.
+
+## Switching organization
+
+If you belong to more than one organization (system admin only — regular users belong to exactly one), use the org switcher in the sidebar header. Switching changes the **active organization** on your session, which is what every tenant-scoped query reads.
+
+See [Manage your organization](/en/account/organization) for what an organization actually is.

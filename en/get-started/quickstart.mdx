@@ -1,0 +1,60 @@
+---
+title: "Quickstart"
+description: "Sign up, create an organization, connect your first executor, and deploy a node in under 10 minutes"
+---
+
+This guide takes you from zero to a running blockchain node. By the end you will have an active executor and your first node syncing.
+
+## Prerequisites
+
+- An email address you can receive messages on.
+- One of:
+  - A Linux host (Ubuntu 22.04+ or Debian 12+) with `sudo` access — for the **Agent** deployment.
+  - A Kubernetes cluster (1.27+) with cluster-admin access — for the **Operator** deployment.
+
+<Note>
+You do not need to expose any inbound ports. The executor connects outbound to the control plane.
+</Note>
+
+## Steps
+
+<Steps>
+  <Step title="Create an account">
+    Sign up at the Novacula console. A personal organization is created for you on completion of sign-up, and you become its **Org Owner**.
+  </Step>
+  <Step title="Generate an executor API key">
+    From the organization sidebar, open **Executors** → **Connect new executor**. Pick `agent` or `operator`, give the executor a name, and copy the displayed API key.
+
+    <Warning>
+    The API key is shown **only once**. Store it somewhere you can reference during install — a password manager, a secret store, or your provisioning system.
+    </Warning>
+  </Step>
+  <Step title="Install the executor">
+    The console shows a copy-pasteable install command for the backend you chose:
+
+    - **Agent** — a one-line installer that downloads the binary, writes a `systemd` unit, and starts the service.
+    - **Operator** — a `helm install` command that deploys the controller and applies the CRD.
+
+    On first start, the executor authenticates with the API key, registers itself, and declares its **capabilities** — the chains, clients, and versions it can run. See [Executor capabilities](/en/executors/executor-capabilities).
+
+    For backend-specific setup details, see [Provision on Kubernetes](/en/infrastructure/provision-on-kubernetes) or [Provision on bare-metal](/en/infrastructure/provision-on-bare-metal).
+  </Step>
+  <Step title="Deploy a node">
+    Open **Nodes** → **Deploy node**. Fill out the wizard:
+
+    - **Target** — pick the executor you just connected, then a chain, network, client, and version.
+    - **Resources** — accept the per-network defaults, or override CPU / RAM / disk.
+    - **Custom config** — leave empty for the first run; you can add overrides later.
+
+    Confirm the review screen. The executor picks up the spec on its next poll (typically within seconds).
+  </Step>
+  <Step title="Watch it sync">
+    The node detail page shows live status from the executor. Logs stream in as the underlying process boots, and sync progress appears once the client starts processing blocks.
+  </Step>
+</Steps>
+
+## Next steps
+
+- [Key concepts](/en/get-started/key-concepts) — the mental model behind executors, nodes, and desired state.
+- [Deploy a node](/en/nodes/deploy-a-node) — every wizard field explained.
+- [Roles and permissions](/en/platform/roles-and-permissions) — invite teammates with the right access level.

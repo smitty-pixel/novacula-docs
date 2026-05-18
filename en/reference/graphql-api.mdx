@@ -1,0 +1,130 @@
+---
+title: "GraphQL API"
+description: "Reference for the Novacula control-plane GraphQL API — endpoint, auth, queries, mutations"
+---
+
+The control plane exposes a single GraphQL endpoint. Every UI page reads through it; every executor sync, log session, and lifecycle action goes through it. There is **no REST surface** — if you need to integrate programmatically, this is the API.
+
+## Endpoint
+
+```
+POST  /graphql
+```
+
+Accepts standard GraphQL request bodies (`query`, `variables`, `operationName`). Apollo Server is the implementation; introspection is enabled in non-production builds.
+
+## Authentication
+
+Two credential types are accepted on the same endpoint:
+
+### Session cookie (interactive)
+
+UI sessions hand the better-auth session cookie to every GraphQL request. You don't typically replicate this from a script — it's tied to the browser login flow.
+
+### API key (programmatic)
+
+Send the org-scoped API key as a bearer token:
+
+```http
+POST /graphql HTTP/1.1
+Authorization: Bearer <api-key>
+Content-Type: application/json
+```
+
+The `AuthGuard` validates the key, looks up its `organizationId` from key metadata, and sets `session.activeOrganizationId` to it. Every tenant-scoped query and mutation reads from there — you don't pass `organizationId` explicitly.
+
+API keys are managed at [API keys](/en/account/api-keys). Use a `purpose=executor` key for an executor; `purpose=personal` for human-driven scripts.
+
+## Authorization
+
+Every query and mutation goes through CASL. The default rules:
+
+- **System admin** can manage all entities.
+- **Org members** can read all entities in their active org; only `owner` and `admin` can mutate.
+
+Trying to access something outside your scope returns the entity as `null` (for query-by-id) or as an empty list (for list queries) — not a 403, by design — so an attacker can't probe membership through error codes. Mutations that fail authorization return a typed error.
+
+## Schema highlights
+
+The schema is generated from Prisma + NestJS via `prisma-nestjs-graphql`. The generated `schema.gql` lives in `apps/control-plane/src/schema.gql`.
+
+### Core types
+
+- **`User`**, **`Organization`**, **`Member`**, **`Invitation`**, **`Session`** — auth (better-auth-managed).
+- **`Executor`** + **`ExecutorResources`** + **`ExecutorApiKeyUsage`** — executor inventory.
+- **`Node`** + **`NotificationNodeOverride`** — node inventory + per-node overrides.
+- **`Event`** — events feed entries.
+- **`AlertIncident`**, **`NotificationSettings`**, **`WebhookDelivery`** — notifications.
+- **`AuditAction`** — audit log entries.
+- **`ExecutorRelease`** — global release catalog (read by all; managed by system admin).
+
+### Common queries
+
+| Query | Purpose |
+| --- | --- |
+| `executors(where, orderBy, take, skip)` | List executors |
+| `executor(where: { id })` | One executor |
+| `nodes(where, orderBy, take, skip)` | List nodes |
+| `node(where: { id })` | One node |
+| `events(filter: EventFilterInput)` | Events feed with cursor pagination |
+| `auditActions(filter: AuditActionFilterInput)` | Audit log with cursor pagination |
+| `notificationCenter` | Open-incident counts + latest 10 incidents (topbar bell) |
+| `notificationSettings` | Effective org notification settings + per-node policies |
+| `notificationIncidents(status)` | Full incident history |
+| `webhookDeliveries` | Last 50 webhook delivery attempts |
+| `executorReleases(where, orderBy)` | Release catalog |
+
+### Common mutations
+
+| Mutation | Purpose |
+| --- | --- |
+| `syncExecutor(input: SyncExecutorInput!)` | Executor heartbeat. Upsert by `(orgId, name)`; carries kind, version, channel, capabilities, resources |
+| `reportRuntimeEvents(input: [RuntimeEventInput!]!)` | Push runtime events from an executor |
+| `createNode(data: NodeCreateInput!)` | Deploy a node |
+| `updateNode(data, where)` | Edit configuration / change desired state |
+| `requestNodeLifecycleAction(id, action)` | `start` / `stop` / `restart` |
+| `deleteNode(where)` | Delete a node |
+| `requestExecutorUpgrade(executorId, targetVersion)` | Initiate an executor self-update |
+| `deleteExecutor(where)` | Remove an executor row |
+| `saveNotificationSettings(input)` | Org-wide notification settings + per-node overrides |
+| `testNotificationWebhook` | Send a synthetic delivery to the configured URL |
+
+System-admin-only:
+
+| Mutation | Purpose |
+| --- | --- |
+| `adminUpdateOrganizationMemberRole` | Change a member's role |
+| `adminSetOrganizationActive` | Activate or deactivate an organization |
+| `createExecutorRelease` / `updateExecutorRelease` / `deleteExecutorRelease` | Manage the release catalog |
+
+## Filters and pagination
+
+- **`where` / `orderBy` / `take` / `skip`** on most list queries follow standard Prisma input shapes (`StringFilter`, `DateTimeFilter`, ...).
+- **Events** use a custom cursor pagination (`EventFilterInput.cursor` + `direction`).
+- **AuditActions** use cursor + connection edges (`AuditActionConnection.pageInfo.endCursor`).
+
+The schema is exhaustive for filters — for example, `events` filters by `executorName`, `nodeName`, and `level`.
+
+## Errors
+
+Errors fall into three buckets:
+
+- **Validation** — bad input shape. Returns a GraphQL error with the field path; HTTP `200` with `errors[]`.
+- **Authorization** — trying to mutate an entity outside your scope. Typed `Forbidden` error.
+- **Domain** — `chain_not_supported_by_executor`, `executor_offline`, `invalid_node_config`, `upgrade_already_pending`, `release_not_found`, etc. Codes are an enum; the messages are intended to be safe to surface in the UI.
+
+The full error code list is in `UserErrorCode` in `@vos/protocol`.
+
+## Versioning
+
+The schema is **not** versioned via URL or version field. Backwards-compatible additions (new fields, new queries) ship continuously; backwards-incompatible changes are rare and announced via [release notes](/en/release-notes).
+
+## Tools
+
+- The Apollo sandbox is available at `/graphql` in non-production builds.
+- The `@vos/control-plane-client` package wraps the schema with `graphql-codegen`-generated TypeScript types — useful as a reference even if you're integrating from a different language.
+
+## Related
+
+- [API keys](/en/account/api-keys) — issue and rotate the credentials this API uses.
+- [Roles and permissions](/en/platform/roles-and-permissions) — what each role can do via this API.

@@ -1,0 +1,99 @@
+---
+title: "Apply executor upgrades"
+description: "Recover when an executor self-update needs intervention — what to check, what to roll back, how"
+---
+
+Executor upgrades are normally **fully automatic**. You request the upgrade in the UI ([Upgrade an executor](/en/executors/upgrade-executor)), the executor self-applies on its next sync, and the new version reports back. The infrastructure side has nothing to do.
+
+This page covers the cases where automation needs help: stuck rollouts, failed binary swaps, and verification mismatches.
+
+## What "self-applies" actually does
+
+For both backends, the trigger is the same: the control plane writes a `pendingUpgrade` blob onto the `Executor` row, and the executor sees it on its next `syncExecutor`.
+
+### Agent
+
+1. Download the new binary into a sibling temp file under the same directory.
+2. Verify SHA-256 against the spec.
+3. Verify a [minisign](https://jedisct1.github.io/minisign/) signature against trusted public keys baked into the running binary (not configurable at runtime).
+4. Hardlink the current binary as `<current>.prev` for the systemd `OnFailure=` rollback unit.
+5. Atomic `rename()` over the current binary.
+6. `systemctl restart novacula-agent.service`.
+
+If the new binary fails to start within `StartLimitBurst=3` over `StartLimitIntervalSec=120`, systemd invokes `novacula-agent-rollback.service`, which `mv`s `.prev` back into place and restarts. **No human action required.**
+
+### Operator
+
+1. Probe the registry to confirm the target image tag exists and is pullable.
+2. Patch the operator's own `Deployment` to the new image.
+3. A self-update monitor watches the rollout. If it sees `ImagePullBackOff` or `CrashLoopBackOff` on the new replicaset within the monitor window, it patches the image back to the prior tag.
+
+## Failure modes and recovery
+
+### Stuck `pendingUpgrade` (executor never picks it up)
+
+Symptom: you requested the upgrade, the UI shows `pendingUpgrade` for >1 minute, no progress.
+
+- **Is the executor online?** Check the executor row's status. If it's `offline`, fix that first — it can't apply an upgrade if it can't sync.
+- **Is the spec stale?** `pendingUpgrade` blobs have a TTL (`PENDING_UPGRADE_TTL_MS`). If you sat on the request for too long, the executor sees it as stale and ignores it. Re-request from the UI.
+
+### Agent rolled back automatically — what now?
+
+If the systemd rollback unit fired, the agent is back on the previous binary and `online`. The control plane will see the version mismatch and clear `pendingUpgrade`. You need to:
+
+1. Read the failing-version logs: `journalctl -u novacula-agent --since '5 minutes ago' --no-pager`.
+2. File the failure with the release notes / changelog before re-attempting.
+3. If you want to retry, re-issue the upgrade — the rollback didn't disable the path forward.
+
+### Agent didn't roll back (binary swap succeeded but won't start)
+
+The `OnFailure=` rollback only fires if the flap budget is exhausted. If the new binary refuses to start once and exits cleanly enough that systemd doesn't count it as a failure (rare but possible), you're stuck on the new binary.
+
+Manual recovery:
+
+```bash
+sudo systemctl stop novacula-agent
+sudo mv /usr/local/bin/novacula-agent /usr/local/bin/novacula-agent.broken
+sudo mv /usr/local/bin/novacula-agent.prev /usr/local/bin/novacula-agent
+sudo systemctl start novacula-agent
+sudo systemctl status novacula-agent
+```
+
+The `.prev` file is left behind by every successful self-update — it's the last known-good binary.
+
+### Operator stuck in `ImagePullBackOff` and the monitor didn't roll back
+
+Symptom: `kubectl get pods -n novacula-system` shows the new pod stuck pulling, the old pod has been removed (or scaled down), and the executor is offline.
+
+- The monitor only rolls back during a defined window after the patch. If the failure didn't manifest in time, the monitor exits and you take over.
+
+Manual recovery:
+
+```bash
+# Find the previous image tag from the deployment's history
+kubectl rollout history deploy/novacula-operator -n novacula-system
+
+# Roll back to the prior revision
+kubectl rollout undo deploy/novacula-operator -n novacula-system
+kubectl rollout status deploy/novacula-operator -n novacula-system
+```
+
+The operator pod restarts on the prior image; on its next sync the control plane sees the old version, clears `pendingUpgrade`, and you're back to where you started.
+
+### SHA-256 or signature mismatch
+
+The agent will refuse the swap and write an error. The control plane keeps `pendingUpgrade` until TTL. This means either:
+
+- The release artifact was re-uploaded with a different binary (legitimate but rare — file with the platform team).
+- Something tampered with the artifact in transit (treat as compromise).
+
+Either way, do **not** override the verification step manually. The trust roots live in the running binary precisely so this can't be bypassed by an attacker who controls the host.
+
+## When to skip automatic upgrades altogether
+
+For tightly change-controlled environments, you can:
+
+- Pin the operator image tag directly in `values.yaml` and never request UI-driven upgrades. Run `helm upgrade` on your own schedule.
+- For the agent, package your own binary distribution and `systemctl restart` from your config-management tooling.
+
+In both cases the executor still calls `syncExecutor` on its normal cadence; it just won't pick up pending upgrades because none are issued. The downside is you lose the signed-rollout-with-rollback safety net the platform provides.

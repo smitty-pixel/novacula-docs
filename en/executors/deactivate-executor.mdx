@@ -1,0 +1,77 @@
+---
+title: "Deactivate an executor"
+description: "Take an executor out of service — disable its API key, delete the row, and clean up the infrastructure"
+---
+
+Deactivating an executor removes it from the control plane and stops it from polling. There are two flavors: **disable the API key** (a quick reversible cut) and **delete the executor row** (a permanent removal that requires the executor to host no nodes).
+
+## Prerequisites
+
+- A role with deploy permission: **owner** or **admin**.
+- For a row delete: no nodes assigned to the executor. Migrate or delete its nodes first.
+
+## Quick disable: revoke the API key
+
+Use this when you want the executor to immediately stop reaching the control plane (compromised host, decommissioning a colo, ...) without losing the row or its history.
+
+1. **Settings** → **API keys**.
+2. Find the key the executor is using (cross-reference with the executor row's "last used key" indicator).
+3. Click **Disable**.
+
+What happens:
+
+- The executor's next `syncExecutor` returns `401`. Within `HEARTBEAT_TIMEOUT_MS` (30s), the executor row's virtual `status` flips to `offline`.
+- Hosted nodes remain in the control plane in their last reported state. They show as unreachable; lifecycle actions queue but won't apply until the executor reconnects.
+- Underlying processes on the infrastructure keep running — the agent / operator daemon doesn't stop just because it can't reach the control plane.
+
+To re-activate later, [rotate the API key](/en/infrastructure/rotate-api-keys) and walk the new key out to the host.
+
+## Permanent removal: delete the executor row
+
+Use this when you're decommissioning the host for good.
+
+### Step 1 — drain hosted nodes
+
+You cannot delete an executor that has nodes. For each node:
+
+- If you want the data preserved, migrate the spec to a different executor (delete + redeploy on the new target).
+- If you don't, **stop** the node, then **delete** it.
+
+Both flows go through the [Node lifecycle](/en/nodes/node-lifecycle).
+
+### Step 2 — delete the row
+
+From **Executors** → executor detail → **Delete**. The control plane:
+
+- Marks the row deleted (the API key tied to it is also disabled).
+- Writes an `executor.deleted` event to the [Events feed](/en/notifications/events-feed).
+- Releases the `(organizationId, name)` slot — you can reuse the name for a new executor.
+
+### Step 3 — clean up the host
+
+The control plane has no way to reach into your infrastructure, so the daemon and any leftover blockchain processes need to be removed manually.
+
+#### Agent
+
+```bash
+sudo systemctl stop novacula-agent
+sudo systemctl disable novacula-agent
+sudo novacula-agent uninstall      # removes systemd units
+sudo rm -rf /var/lib/novacula      # removes config + binaries + node data
+```
+
+Stop and remove the per-node `systemd` units the agent created — see [Agent CLI](/en/reference/agent-cli) for the unit naming convention.
+
+#### Operator
+
+```bash
+helm uninstall novacula-operator -n novacula-system
+kubectl delete crd blockchainnodes.validatoros.com
+kubectl delete namespace novacula-system
+```
+
+PersistentVolumeClaims created by deployed nodes are not removed by `helm uninstall` — `kubectl delete pvc` per claim if you want the storage back, or leave them for forensics.
+
+## When you're not sure: just disable
+
+If you're not 100% sure you'll never want this executor back, **disable the API key** instead of deleting the row. Disabled keys can be re-enabled by issuing a new key to the same host; deleted rows are gone for good.

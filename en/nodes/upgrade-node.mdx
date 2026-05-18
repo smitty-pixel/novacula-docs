@@ -1,0 +1,72 @@
+---
+title: "Upgrade a node"
+description: "Move a node's client version forward (or back), with the executor doing the actual swap"
+---
+
+Upgrading a node means changing the **client version** of one or more of its processes. The chain stays the same, the network stays the same, the data directory is preserved — only the binary or container image swaps. Use it for routine release adoption, hard-fork preparation, and downgrading when a new release misbehaves.
+
+## Prerequisites
+
+- A role with deploy permission: **owner** or **admin**.
+- The target version must be in the executor's [capabilities](/en/executors/executor-capabilities) for this chain × client. If it's not, [upgrade the executor](/en/executors/upgrade-executor) first — newer executor releases ship newer client support.
+- The target version must satisfy any **per-network constraints** the chain adapter declares (e.g. Hoodi requires `geth >=1.15.0`). The version picker hides versions that don't qualify.
+
+## Steps
+
+<Steps>
+  <Step title="Open the upgrade dialog">
+    From the node detail page → **Actions** → **Upgrade**. For multi-role chains (Ethereum), you pick a target version per role independently.
+  </Step>
+  <Step title="Pick a target version">
+    The version dropdown shows every version the executor declared for this chain × client × network. Release notes (when published with the executor release) appear inline.
+
+    Downgrades are supported by selecting any older version that still satisfies the capability + constraint check.
+  </Step>
+  <Step title="Confirm">
+    The control plane writes a new `Node.spec` revision with the new version under `clients.<role>`. The chain adapter recomputes the container image (Operator) or download URL (Agent).
+  </Step>
+  <Step title="Wait for the executor to reconcile">
+    On the next reconciler tick (≤5s), the executor:
+
+    - **Agent** — downloads the new client binary into `<data_dir>/bin/<client>-<version>` if missing, regenerates config, restarts the affected `systemd` service.
+    - **Operator** — patches the `BlockchainNode` CR's image references; the controller propagates them into the `StatefulSet`. Kubernetes does a rolling restart on the pod.
+
+    The reporter loop will surface `starting` → `running` → `syncing` as the new client comes up. The data directory is preserved — there is no resync from genesis unless the new client requires a different data layout.
+  </Step>
+</Steps>
+
+## Multi-role upgrades (Ethereum)
+
+For Ethereum, EL and CL versions are independent:
+
+- You can upgrade EL alone, CL alone, or both at once.
+- The processes share a JWT secret over the Engine API; restarting one doesn't invalidate the other.
+- If you want to switch from one CL client to another (e.g. Lighthouse → Prysm), that's not an upgrade — it's a redeploy. The data directory layout differs across CLs.
+
+## What happens to data
+
+The data directory is preserved across upgrades. New clients usually understand the prior on-disk format; if they don't, they'll resync from where they can (typically a checkpoint URL on Ethereum CL, or a snapshot URL on Tron).
+
+For chains where this is risky in either direction, the chain adapter sets `versionConstraints` on the network to prevent the obviously-broken combinations from being selected at all.
+
+## Rollback
+
+If the new version misbehaves:
+
+1. Open the upgrade dialog again.
+2. Pick the prior version from the same dropdown — older versions stay listed until they fall out of executor capabilities.
+3. Confirm. The executor reconciles back the same way it reconciled forward.
+
+If the upgrade left the node wedged in `error` (e.g. the new client refuses the existing data directory), use **Actions** → **Stop**, then re-deploy with the prior version, then **Start**.
+
+## Audit + events
+
+Every version change is recorded in:
+
+- The audit log under the actor + target node id.
+- The events feed as `node.lifecycle.transition` with the spec revision diff.
+
+## Related
+
+- [Upgrade an executor](/en/executors/upgrade-executor) — to add support for a newer client release.
+- [Edit node configuration](/en/nodes/edit-configuration) — for resource and config changes that aren't a version swap.

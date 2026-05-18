@@ -1,0 +1,79 @@
+---
+title: "Chains and networks"
+description: "How Novacula models blockchain support — chains, networks, roles, clients, versions"
+---
+
+Five concepts model every blockchain Novacula supports. Each one narrows the next; together they describe what actually runs on a host or pod.
+
+## Chain
+
+The top-level identifier — `bitcoin`, `bsc`, `ethereum`, `sui`, `tron` today. A chain is a single chain adapter inside the executor. Adding chain support is a code change in `@vos/adapter`; the adapter declares everything else on this page.
+
+See [Supported chains](/en/chains/overview) for the matrix of what's available right now.
+
+## Network
+
+A named flavor of a chain — `mainnet`, `sepolia`, `signet`, `chapel`, `nile`, etc. Different networks have different defaults: ports, image tags, resource budgets, sometimes minimum client versions. Per-network defaults live in the chain adapter's `defaults(network)` and `resourceRequirements(params)` methods.
+
+The network list is closed: only networks the adapter knows about are eligible. Trying to deploy a node onto an unsupported network is rejected at validation time.
+
+## Role
+
+The slot a process fills inside a node. Most chains are single-role with `node` (Bitcoin, BSC, Sui, Tron). Ethereum is two-role: `el` (execution layer) plus `cl` (consensus layer), connected over the JWT-authenticated Engine API.
+
+Roles matter because each role gets its own client choice, version, and override surface. They also drive log scoping — see [Node logs](/en/nodes/logs) — so you can stream EL logs and CL logs independently.
+
+## Client
+
+The actual blockchain implementation that runs in a role. Examples:
+
+| Chain | Role | Clients |
+| --- | --- | --- |
+| Bitcoin | `node` | `bitcoind` |
+| BSC | `node` | `geth` (BSC fork) |
+| Ethereum | `el` | `geth`, `reth`, `nethermind`, `erigon` |
+| Ethereum | `cl` | `lighthouse`, `prysm`, `lodestar` |
+| Sui | `node` | `sui-node` |
+| Tron | `node` | `java-tron` |
+
+Each client owns its image, install URL, default flags, port plan, init container needs (genesis download, JWT generation, snapshot fetch, ...), and metrics scrape config.
+
+## Version
+
+The release tag of a client. The chain adapter resolves a version into a concrete container image tag (Operator) or download URL (Agent). Some networks add **version constraints** — for example Hoodi requires `geth >=1.15.0`, `reth >=2.0.0`. The deploy wizard rejects out-of-window versions before saving.
+
+## Node type
+
+Orthogonal to the above: **Full** or **Archive**. Full is supported everywhere; Archive is supported only where the underlying client supports it (today: Ethereum and BSC).
+
+Archive nodes use larger storage budgets and pass an additional flag set through the chain adapter.
+
+## How they compose
+
+A `NodeSpec` ties all five together — for example, an Ethereum node spec carries:
+
+```text
+chain         = ethereum
+network       = mainnet
+nodeType      = full
+clients.el    = { name: "geth",       version: "1.15.6" }
+clients.cl    = { name: "lighthouse", version: "5.3.0" }
+```
+
+The chain adapter then expands that into:
+
+- Image references for each role.
+- Per-role init containers (e.g. JWT secret generation, checkpoint sync URL injection).
+- A consolidated port plan (EL RPC `8545`, EL P2P `30303`, Engine `8551`, CL API `5052`, ...).
+- Resource defaults pulled from the network entry.
+- A list of overridable config-file keys and CLI flags — the **override schema** — that the UI uses to validate user input.
+
+## Capabilities
+
+The set of `chain × network × role × client × version × nodeType` that a *specific* executor knows how to run is its **capabilities** payload, declared on every `syncExecutor` heartbeat. The Deploy node wizard intersects the global catalog with the executor's capabilities, so you can never deploy something the target can't actually serve.
+
+See [Executor capabilities](/en/executors/executor-capabilities).
+
+## Per-chain pages
+
+For port numbers, default storage sizes, override matrices, and notes on each supported chain, see [Supported chains overview](/en/chains/overview) and the per-chain pages: [Bitcoin](/en/chains/bitcoin), [BSC](/en/chains/bsc), [Ethereum](/en/chains/ethereum), [Sui](/en/chains/sui), [Tron](/en/chains/tron).

@@ -1,0 +1,58 @@
+---
+title: "Members and invitations"
+description: "Invite people into your organization, change their role, and remove access"
+---
+
+The **Members** page is where owners and admins control who has access to the organization. Each row represents one user holding one role.
+
+## Invite a member
+
+From **Members** → **Invite member**:
+
+1. Enter the invitee's email address.
+2. Pick a role — `member` (read-only) or `admin` (manage executors, nodes, notifications). Owner cannot be assigned at invite time; ownership transfers happen separately.
+3. Submit. An invitation email is sent with a one-click accept link.
+
+Behind the scenes, an `Invitation` row is created with status `pending` and an `expiresAt` timestamp. If the invitee doesn't accept before expiry, you'll need to invite them again.
+
+A **member** invitation can be issued by owners and admins. An **admin** invitation can only be issued by owners.
+
+## Pending invitations
+
+Outstanding invitations show in the **Invitations** sub-tab on the same page. From here you can:
+
+- **Resend** — re-issues the email with a new accept link.
+- **Cancel** — sets status to `cancelled` so the link no longer works.
+
+If the user already exists in Novacula, accepting the invitation just adds a new `Member` row. If they don't, accepting creates an account first.
+
+## Change a member's role
+
+Open the member's row to see the role selector. Constraints:
+
+- Owners can promote anyone to admin or demote any admin to member.
+- Owners can transfer ownership to another member (the previous owner becomes admin).
+- Admins can promote/demote between member and admin, but cannot touch owners or other admins.
+- Members cannot change anyone's role.
+
+Role changes take effect on the member's next API call — there is no need for them to log out and back in.
+
+## Remove a member
+
+The **Remove** action on a member's row deletes the `Member` link. The user account itself is not deleted — they simply lose access to this org's data.
+
+Constraints:
+
+- Owners cannot be removed; transfer ownership first.
+- Admins cannot remove the owner or another admin.
+- You cannot remove yourself; ask another owner/admin or leave the org from your account settings.
+
+## What happens when a member leaves
+
+- All sessions tied to that org for the user are invalidated within seconds.
+- API keys remain valid (they're tied to the org, not the user) — see [API keys](/en/account/api-keys) to rotate any keys the departing member generated.
+- The `AuditAction` rows attributed to the user stay in the audit log for compliance.
+
+## Audit
+
+Every invite, role change, and removal is recorded in the [Audit log](/en/account/organization#audit-log) with the actor, target, and timestamp.

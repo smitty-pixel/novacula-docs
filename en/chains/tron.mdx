@@ -1,0 +1,69 @@
+---
+title: "Tron"
+description: "`java-tron` — networks, JVM tuning, ports, resource defaults, and `config.conf` overrides"
+---
+
+Tron nodes run as a single `java-tron` process per node. The chain adapter installs a JRE matched to the host architecture, renders `config.conf` (HOCON), and starts `java-tron` with a network-specific JVM heap size. An optional snapshot-fetch init container can seed the LevelDB data directory from a community-operated mirror.
+
+## Networks and resources
+
+| Network | CPU | RAM | Disk | JVM heap |
+| --- | --- | --- | --- | --- |
+| `mainnet` | 16 cores | 32 GiB | 4000 GiB | 12 GiB |
+| `nile` | 8 cores | 16 GiB | 300 GiB | 9 GiB |
+
+JVM heap is set per network and exposed as a managed value — the adapter passes `-Xms<heap> -Xmx<heap>` to the JVM. To tune it, edit `heapSize` in the adapter's network config; it is not a per-node user override.
+
+## Ports
+
+| Name | Port | Notes |
+| --- | --- | --- |
+| gRPC | `50051` | Wallet / fullnode gRPC API |
+| HTTP | `8090` | Wallet / fullnode HTTP API |
+| P2P | `18888` | DevP2P |
+| Metrics | `9527` | Prometheus exporter |
+
+## Node types
+
+**Full** only. For full-history use cases, set `node.openHistoryQueryWhenLiteFN: false` (the default) and accept the disk budget.
+
+## Init steps
+
+On first reconcile per node:
+
+1. **JRE install** — the right JRE archive for the host architecture is downloaded into the node's data directory. This step runs once per `(host, version)` pair.
+2. **Optional snapshot fetch** — if a `SNAPSHOT_MIRRORS` URL is set for the network (mainnet today; Nile is sync-from-genesis), an init container walks the mirror's nginx autoindex to pick the freshest `/backup<YYYYMMDD>/` directory, downloads the LevelDB archive, verifies SHA-256, and unpacks into the data directory. There is no stable `/latest/` symlink upstream — the walker picks the date-named directory on every fresh init.
+3. **Config render** — `config.conf` is written from a HOCON template merged with whitelisted user overrides.
+
+## Config overrides
+
+Overrides go into `config.conf` (HOCON). The schema declares:
+
+- **Managed paths** — networking, data dir, ports, mirror endpoints. Rejected at validate time.
+- **Known keys** — a curated `TRON_USER_ALLOWED_KEYS` list (see `packages/adapter/src/tron/apply-config.ts`) covering tunables like:
+  - `node.openHistoryQueryWhenLiteFN` (boolean)
+  - `node.fastSyncSupport` and other `*Args` flags (boolean)
+  - Numeric tuning under `node.*` and `storage.*`
+
+Free-form keys not on the managed list are accepted, but the typical workflow is to stick to the known list. The adapter uses HOCON-aware merging (`appendHoconAssignments`) to splice user overrides into the rendered file.
+
+## JVM tuning
+
+The biggest knob for `java-tron` performance is heap size. Defaults assume modern mainnet block sizes; if you're running on substantially more RAM, bump `heapSize` in your adapter config and let it grow proportionally. Setting heap > 70% of node RAM is asking for OOM kills under load — leave headroom for the JVM's off-heap and the kernel page cache.
+
+## Metrics
+
+Scraped from the `java-tron` Prometheus exporter on `:9527`. Surfaced:
+
+- Current block height, solidified block height.
+- Peer count.
+- JVM heap usage, GC stats.
+- Disk usage.
+
+See [Node monitoring](/en/nodes/monitoring).
+
+## Common patterns
+
+- **Lite full node** — set `node.openHistoryQueryWhenLiteFN: true`; node serves recent history only and uses much less disk.
+- **Snapshot-bootstrapped mainnet** — defaults — adapter init pulls the latest `/backup<date>/` from the mainnet mirror, cutting initial sync time substantially. Nile sync is genesis-only (no published mirror).
+- **Behind a proxy** — expose `:8090` (HTTP) or `:50051` (gRPC) through your own reverse proxy; the adapter doesn't manage TLS termination.

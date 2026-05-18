@@ -1,0 +1,38 @@
+---
+title: "Introduction"
+description: "B2B platform for managing blockchain nodes across bare-metal and Kubernetes"
+---
+
+Novacula is a B2B platform for operating blockchain nodes at scale. The control plane runs in the Novacula cloud; the nodes themselves run on infrastructure you control — bare-metal servers, Kubernetes clusters, or both — managed by lightweight executors that poll the control plane outbound.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/en/get-started/quickstart">
+    Sign up, connect an executor, and deploy your first node in under 10 minutes.
+  </Card>
+  <Card title="Key concepts" icon="book" href="/en/get-started/key-concepts">
+    The mental model — control plane, executors, nodes, processes, desired state.
+  </Card>
+  <Card title="Architecture" icon="diagram-project" href="/en/platform/architecture">
+    How the control plane and executors fit together.
+  </Card>
+  <Card title="Supported chains" icon="link" href="/en/chains/overview">
+    Bitcoin, BSC, Ethereum, Sui, Tron — networks, clients, versions.
+  </Card>
+</CardGroup>
+
+## Two execution backends
+
+Novacula nodes run through one of two backends, both implementing the same `ChainAdapter` interface:
+
+- **[Agent](/en/executors/agent-bare-metal)** — a Linux daemon that manages node processes as `systemd` services. Use it on bare-metal or virtual machines.
+- **[Operator](/en/executors/operator-kubernetes)** — a Kubernetes controller that materializes nodes as `ConfigMap` + `StatefulSet`. Use it on K8s clusters.
+
+Pick the one that matches your infrastructure — or run both side-by-side under the same organization.
+
+## Outbound-only
+
+Executors always initiate connections to the control plane over HTTPS. The control plane never reaches into your infrastructure, so you don't need to expose any inbound ports, open firewall rules, or run VPN tunnels.
+
+<Info>
+Need a programmatic interface for the platform? See [GraphQL API](/en/reference/graphql-api).
+</Info>

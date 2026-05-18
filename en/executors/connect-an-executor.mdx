@@ -1,0 +1,78 @@
+---
+title: "Connect an executor"
+description: "Generate an API key and bring an Agent or Operator online against your organization"
+---
+
+Connecting an executor takes two actions that have to happen in order: the control plane issues an API key tied to your organization, and you install the executor binary (Agent) or chart (Operator) on your infrastructure pointing at that key.
+
+## Prerequisites
+
+- A role that can create API keys: **owner** or **admin**. See [Roles and permissions](/en/platform/roles-and-permissions).
+- One of:
+  - A Linux host (Ubuntu 22.04+, Debian 12+) with `sudo` for the **Agent**.
+  - A Kubernetes cluster (1.27+) with cluster-admin for the **Operator**.
+- Outbound HTTPS to the control plane URL. No inbound connectivity is required.
+
+## Steps
+
+<Steps>
+  <Step title="Open the connect dialog">
+    From the sidebar: **Executors** → **Connect new executor**. Pick a backend:
+
+    - **`agent`** — bare-metal daemon, manages nodes as `systemd` services.
+    - **`operator`** — Kubernetes controller, manages nodes as `BlockchainNode` CRs.
+
+    Give the executor a name. The name is your label — it appears in the executors list, the events feed, and as a target in the [Deploy node wizard](/en/nodes/deploy-a-node). Names are unique per organization.
+
+    Optionally pick a **release channel** (`stable`, `beta`). Channel controls which executor releases the control plane offers as upgrades.
+  </Step>
+  <Step title="Copy the API key">
+    Submit the form. The next screen shows:
+
+    - The full API key string.
+    - A copy-pasteable install command for your chosen backend.
+
+    <Warning>
+    The plaintext API key is shown **only once**. Copy it now into a password manager, secrets vault, or your provisioning system. There is no way to read it again.
+    </Warning>
+  </Step>
+  <Step title="Install on your infrastructure">
+    Run the install command on the target machine.
+
+    - **Agent** — see [Provision on bare-metal](/en/infrastructure/provision-on-bare-metal) for the full TOML config and `systemd` setup.
+    - **Operator** — see [Provision on Kubernetes](/en/infrastructure/provision-on-kubernetes) for the Helm install and CRD bootstrap.
+
+    On first start, the executor:
+
+    1. Reads the API key from local config.
+    2. Calls `syncExecutor` against the control plane URL.
+    3. The control plane creates the `Executor` row keyed by `(organizationId, name)`.
+    4. The executor declares its [capabilities](/en/executors/executor-capabilities) — chains, networks, clients, versions.
+  </Step>
+  <Step title="Confirm online">
+    Back in the UI, the executor row should flip to `online` within a few seconds (heartbeat is 5s; offline timeout is 30s). The capabilities list should populate with the chains the binary was built with.
+
+    If the row stays `offline`:
+
+    - Check the executor's logs (`journalctl -u novacula-agent` or `kubectl logs -n novacula-system deploy/operator`).
+    - Confirm outbound HTTPS to the control plane URL.
+    - Verify the API key was copied without trailing whitespace.
+  </Step>
+</Steps>
+
+## What happens server-side
+
+- An `ApiKey` row is created with the org id stored in metadata.
+- On first `syncExecutor`, an `Executor` row is created (if `(orgId, name)` is new) or upserted (if you're reconnecting an existing executor against a fresh key).
+- An `executor.connected` event is written to the [Events feed](/en/notifications/events-feed).
+- An `ExecutorApiKeyUsage` row tracks which key was used, for the API-key list's "last used" column.
+
+## Reconnecting an existing executor
+
+If you've reinstalled or moved an executor and it comes back online with the same name + org, it picks up where it left off — the `Executor` row is reused. To force a fresh row, change the name in the agent's TOML or the operator's `NOVACULA_OPERATOR_NAME`.
+
+## Next steps
+
+- [Deploy a node](/en/nodes/deploy-a-node) onto your fresh executor.
+- [Roles and permissions](/en/platform/roles-and-permissions) — invite teammates with the right access level.
+- [Rotate executor API keys](/en/infrastructure/rotate-api-keys) — zero-downtime key rotation.

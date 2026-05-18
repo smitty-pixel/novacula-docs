@@ -1,0 +1,49 @@
+---
+title: "Key concepts"
+description: "Control plane, executors, nodes, processes, and the desired-state model in one page"
+---
+
+Five terms cover most of what you'll see in the Novacula UI and API. Read them in order — each one builds on the previous.
+
+## Control plane
+
+The **control plane** is the Novacula SaaS service. It stores your organizations, members, executors, nodes, and the desired-state specs that describe how each node should run. The UI, GraphQL API, and webhook outputs all live here.
+
+You never install the control plane yourself — it's the side of Novacula we operate.
+
+## Executor
+
+An **executor** is a piece of software you install on your own infrastructure. It authenticates to the control plane with an API key and polls outbound for work assigned to it.
+
+There are two backends, both implementing the same `ChainAdapter` interface:
+
+| Backend | Runs on | How it materializes a node |
+| --- | --- | --- |
+| **[Agent](/en/executors/agent-bare-metal)** | A Linux host | As a set of `systemd` services |
+| **[Operator](/en/executors/operator-kubernetes)** | A Kubernetes cluster | As `ConfigMap` + `StatefulSet` |
+
+When an executor connects, it declares its **capabilities** — the chains, clients, and versions it knows how to run. The Deploy node wizard only offers options the target executor can actually serve.
+
+## Node
+
+A **node** is your unit of management in the UI. It corresponds to one validator participating in one blockchain network — for example, "Ethereum mainnet, Geth + Lighthouse, archive".
+
+A node is not the same as a process: a single node can map to one or more OS-level processes.
+
+## Process
+
+A **process** is one running OS service or container that belongs to a node. Most chains are single-process (Bitcoin, BSC, Sui, Tron). Ethereum is two-process: an **execution layer** client (Geth / Reth / Nethermind / Erigon) plus a **consensus layer** client (Lighthouse / Prysm / Lodestar), communicating over the JWT-authenticated Engine API.
+
+Logs, metrics, and lifecycle commands are surfaced per-process in the UI.
+
+## Desired-state model
+
+Novacula is **desired-state**, not imperative. You don't tell the executor "start this process now"; you give the control plane a target — "this node should be running Geth 1.15.6 with these resources at revision 7" — and the executor reconciles.
+
+Each node spec carries a monotonically increasing **revision**. The executor fetches the latest revision on every poll, applies it, and acknowledges it back. If a node is seen at a revision older than the latest, the UI surfaces drift.
+
+See [Desired-state model](/en/platform/desired-state-model) for the lifecycle in detail.
+
+<Tip>
+Coming from Kubernetes? The same way `kubectl apply` writes desired state and a controller converges to it — that's the relationship between the control plane and an executor.
+</Tip>

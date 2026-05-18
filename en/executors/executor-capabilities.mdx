@@ -1,0 +1,94 @@
+---
+title: "Executor capabilities"
+description: "What an executor declares it can run, and how the control plane uses that to gate the deploy wizard"
+---
+
+When an executor calls `syncExecutor` it includes its **capabilities** — the full set of `chain × network × role × client × version × nodeType` combinations the binary it's running knows how to operate. The control plane stores this on the `Executor` row and uses it as the source of truth for what the deploy wizard offers and what mutations it allows.
+
+## What's in the payload
+
+The capabilities blob (one per chain adapter compiled into the executor) looks like:
+
+```jsonc
+{
+  "supportedChains": [
+    {
+      "chain": "ethereum",
+      "networks": ["mainnet", "sepolia", "hoodi"],
+      "roles": [
+        {
+          "role": "el",
+          "clients": [
+            { "name": "geth",       "versions": ["1.15.6", "1.14.13"] },
+            { "name": "reth",       "versions": ["1.5.0"] },
+            { "name": "nethermind", "versions": ["1.31.9"] },
+            { "name": "erigon",     "versions": ["3.0.4"] }
+          ]
+        },
+        {
+          "role": "cl",
+          "clients": [
+            { "name": "lighthouse", "versions": ["5.3.0"] },
+            { "name": "prysm",      "versions": ["7.1.0"] },
+            { "name": "lodestar",   "versions": ["1.21.0"] }
+          ]
+        }
+      ],
+      "nodeTypes": ["full", "archive"],
+      "defaults": {
+        "mainnet": { "cpu": "4", "memory": "16Gi", "storage": { "data": "2548Gi" } },
+        "sepolia": { "cpu": "2", "memory": "8Gi",  "storage": { "data": "300Gi"  } }
+      },
+      "configOverrideSchema": { /* file overrides + arg overrides per process */ }
+    }
+  ],
+  "features": ["sync", "event", "lifecycle"],
+  "storageClasses": []
+}
+```
+
+`storageClasses` is populated by the Operator from a probe of the cluster's `StorageClass` objects; the Agent leaves it empty.
+
+## When it's reported
+
+Capabilities are sent on **every** `syncExecutor` call, not just the first one. That keeps the picture fresh after an executor upgrade adds support for a new chain, version, or feature. The control plane just overwrites the `capabilities` column on the `Executor` row.
+
+## How the control plane uses it
+
+### The deploy wizard
+
+[Deploy a node](/en/nodes/deploy-a-node) uses capabilities to constrain the next pick:
+
+1. The user selects an executor.
+2. The chain dropdown shows only chains the executor declared.
+3. Picking a chain narrows the network list to ones the executor knows.
+4. Picking a network narrows the client + version list. Clients with declared `versionConstraints` for the network (e.g. Hoodi requires `geth >=1.15.0`) are filtered accordingly.
+
+If a combo isn't available because the executor doesn't support it, the wizard tells you to upgrade the executor first.
+
+### Server-side guard
+
+The `createNode` and `updateNode` mutations re-check the spec against the executor's current capabilities. If you somehow bypass the wizard (calling the GraphQL API directly), the mutation returns `chain_not_supported_by_executor` rather than writing a spec the executor can't honor.
+
+### The override schema
+
+Each chain adapter exposes a `configOverrideSchema` describing:
+
+- Which **config-file** keys the user can override per process, and which keys are managed (data dir, RPC bindings, ports).
+- Which **CLI flags** the user can pass per process, and which flags are managed.
+
+The schema is shipped with the capabilities, so the UI knows exactly what fields to render in the [Custom config step](/en/nodes/edit-configuration) for whichever client you picked.
+
+## Features
+
+The executor also declares which protocol **features** it implements:
+
+- `sync` — the basic spec polling loop. Mandatory.
+- `event` — runtime event reporting via `reportRuntimeEvents`.
+- `lifecycle` — pickup of `start` / `stop` / `restart` lifecycle actions.
+
+A control plane reading a missing feature avoids issuing requests the executor wouldn't process.
+
+## Upgrading capabilities
+
+The set of supported networks, clients, and versions is hard-coded into the executor binary's chain adapters. To add support for a new release, [upgrade the executor](/en/executors/upgrade-executor) — the post-upgrade `syncExecutor` will declare the new versions, and the deploy wizard picks them up immediately.

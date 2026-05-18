@@ -1,0 +1,69 @@
+---
+title: "Nodes overview"
+description: "What a node is in Novacula, how it maps to OS-level processes, and where to go for each lifecycle action"
+---
+
+A **node** is your unit of management in the UI. It corresponds to one validator participating in one blockchain network — for example, "Ethereum mainnet, Geth + Lighthouse, full". Behind every node is a serialized `NodeSpec` in the control plane and one or more `systemd` services or Kubernetes pods on the executor side.
+
+## Node ≠ process
+
+A node maps to **one or more processes** depending on the chain:
+
+| Chain | Roles | Processes per node |
+| --- | --- | --- |
+| Bitcoin | `node` (`bitcoind`) | 1 |
+| BSC | `node` (BSC `geth`) | 1 |
+| Ethereum | `el` + `cl` | 2 — one EL client + one CL client, sharing a JWT secret over the Engine API |
+| Sui | `node` (`sui-node`) | 1 |
+| Tron | `node` (`java-tron`) | 1 |
+
+Logs and metrics surface per-process — see [Node logs](/en/nodes/logs) and [Node monitoring](/en/nodes/monitoring) — so you can stream the EL output independently of the CL output, even though they belong to the same node.
+
+## Anatomy of a node
+
+Every node carries:
+
+- **Identity** — `name` (unique within the executor) and `id` (UUID).
+- **Target executor** — the executor that owns and reconciles this node. A node belongs to exactly one executor; moving it means deleting and redeploying.
+- **`NodeSpec`** — the desired declaration: chain, network, node type, clients, images, storage, optional config overrides, sidecars, resource requests, desired lifecycle state.
+- **`ObservedNodeState`** — the executor's most recent report. Includes per-process status, sync metrics, and the spec revision the executor has currently materialized.
+- **`observedAt`** — freshness timestamp on the report.
+
+## Lifecycle in one screen
+
+The node detail page is the single source of truth for everything that's true about a node right now:
+
+- **Status badge** — composite of desired state, per-process observed status, and revision drift.
+- **Metrics tiles** — sync progress, peers, disk usage, last block.
+- **Logs** — live stream per process.
+- **Events** — chronological feed of every state change, lifecycle action, and error attributed to this node.
+- **Configuration** — read-only view of the active spec and an **Edit** action.
+- **Lifecycle actions** — Start, Stop, Restart, Delete (depending on current state).
+
+## Where to go for each action
+
+| Want to | Page |
+| --- | --- |
+| Create a new node | [Deploy a node](/en/nodes/deploy-a-node) |
+| Start, stop, restart, delete | [Node lifecycle](/en/nodes/node-lifecycle) |
+| Change resources or config | [Edit node configuration](/en/nodes/edit-configuration) |
+| Move to a newer client version | [Upgrade a node](/en/nodes/upgrade-node) |
+| Filter / find a node in a long list | [Groups and tags](/en/nodes/groups-and-tags) |
+| Watch live process output | [Node logs](/en/nodes/logs) |
+| Read sync / peers / health metrics | [Node monitoring](/en/nodes/monitoring) |
+
+## Permissions
+
+- **Create / edit / lifecycle / delete:** owner, admin.
+- **Read (status, logs, metrics, events):** any org member.
+
+See [Roles and permissions](/en/platform/roles-and-permissions).
+
+## How nodes appear on infrastructure
+
+The executor that owns the node is responsible for materializing it:
+
+- **[Agent](/en/executors/agent-bare-metal)** — one `systemd` service per process; data lives under `<data_dir>/nodes/<name>/`.
+- **[Operator](/en/executors/operator-kubernetes)** — one `BlockchainNode` CR → one `StatefulSet` (with one container per role) + a `ConfigMap` + a per-storage `PersistentVolumeClaim`.
+
+You don't need to log into the host or `kubectl exec` to operate a node — every action is exposed in the UI. But if you need to debug something the platform isn't surfacing, both backends leave plain `journalctl` / `kubectl logs` output behind that you can read directly.

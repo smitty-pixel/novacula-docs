@@ -1,0 +1,135 @@
+---
+title: "Provision an executor on bare-metal"
+description: "Install the Novacula Agent as a systemd service on a Linux host and bring it online"
+---
+
+This guide takes you from a fresh Linux host to a registered, online Agent executor. End-state: the host runs `novacula-agent.service`, the control plane sees it as `online`, and you can deploy nodes onto it from the UI.
+
+For the conceptual overview of what an Agent is, see [Agent (bare-metal)](/en/executors/agent-bare-metal).
+
+## Prerequisites
+
+- **OS** — Ubuntu 22.04+ or Debian 12+ (`x86_64` or `aarch64`).
+- **Privileges** — `root` or `sudo`.
+- **Network** — outbound HTTPS to the control plane URL.
+- **Disk** — a partition mounted at `/var/lib/novacula` (the default `data_dir`) sized for the chains you plan to run plus headroom for binaries and per-node state. Tron mainnet alone wants ~4 TB.
+- **API key** — see [Connect an executor](/en/executors/connect-an-executor) to issue one. You'll need the plaintext value in the next step.
+
+## Steps
+
+<Steps>
+  <Step title="Install the binary">
+    Download the binary the install command from the **Connect new executor** screen prints:
+
+    ```bash
+    curl -fsSL <download-url> -o /usr/local/bin/novacula-agent
+    sudo chmod +x /usr/local/bin/novacula-agent
+    ```
+
+    The binary is a self-contained Bun-compiled executable; it has no runtime dependency on Bun, Node, or anything else on the host.
+  </Step>
+  <Step title="Write the agent config">
+    Create `/etc/novacula/agent.toml`:
+
+    ```toml
+    [agent]
+    name        = "agent-1"             # unique within your organization
+    data_dir    = "/var/lib/novacula"   # root for binaries, configs, node data
+    channel     = "stable"              # or "beta" for early upgrades
+
+    [control_plane]
+    url          = "https://<your-control-plane>"
+    access_token = "<api-key-from-connect-step>"
+
+    [logging]
+    level  = "info"
+    format = "json"
+
+    [reconciler]
+    interval_secs = 5
+
+    [reporter]
+    interval_secs    = 10
+    scrape_timeout_ms = 5000
+    ```
+
+    Make sure permissions on `agent.toml` are tight (`chmod 600`) — it carries the API key.
+  </Step>
+  <Step title="Install the systemd unit">
+    The agent ships an installer that writes the unit + rollback unit and enables the service:
+
+    ```bash
+    sudo /usr/local/bin/novacula-agent install \
+      --config /etc/novacula/agent.toml \
+      --binary /usr/local/bin/novacula-agent
+    ```
+
+    What this does:
+
+    - Writes `/etc/systemd/system/novacula-agent.service` with `Restart=on-failure`, `StartLimitBurst=3`, `OnFailure=novacula-agent-rollback.service`.
+    - Writes `/etc/systemd/system/novacula-agent-rollback.service` (the one-shot that restores `<binary>.prev` after a wedged self-update).
+    - `systemctl daemon-reload && systemctl enable novacula-agent`.
+  </Step>
+  <Step title="Start the service">
+    ```bash
+    sudo systemctl start novacula-agent
+    sudo systemctl status novacula-agent
+    journalctl -u novacula-agent -f
+    ```
+
+    The first `syncExecutor` call should land within a few seconds. Look for log lines like `executor registered` and `capabilities reported`.
+  </Step>
+  <Step title="Confirm online in the UI">
+    From **Executors**, your new executor row should be `online` with capabilities populated for every chain the binary supports.
+
+    If it stays `offline`:
+
+    - Check `journalctl -u novacula-agent -n 100` for auth or network errors.
+    - Confirm outbound HTTPS to the URL in `agent.toml`.
+    - Verify the API key was copied without trailing whitespace.
+  </Step>
+</Steps>
+
+## What the agent owns on disk
+
+After install + first sync:
+
+```
+/etc/novacula/agent.toml                    ← config (you wrote this)
+/etc/systemd/system/novacula-agent.service  ← service unit
+/etc/systemd/system/novacula-agent-rollback.service
+/usr/local/bin/novacula-agent               ← binary
+/usr/local/bin/novacula-agent.prev          ← previous binary (after a self-update)
+/var/lib/novacula/                          ← data_dir
+  ├── credentials.json                      ← cached auth state
+  ├── bin/                                  ← downloaded client binaries (geth, bitcoind, ...)
+  └── nodes/<name>/
+      ├── config/                           ← rendered config files
+      └── data/                             ← per-node blockchain data
+```
+
+Per-node systemd units the agent creates are also under `/etc/systemd/system/` and named like `<chain>-<role>@<node>.service`.
+
+## Service management
+
+```bash
+sudo systemctl restart novacula-agent
+sudo systemctl stop novacula-agent
+sudo /usr/local/bin/novacula-agent status
+sudo /usr/local/bin/novacula-agent uninstall   # removes systemd units
+```
+
+See [Agent CLI](/en/reference/agent-cli) for every subcommand.
+
+## Hardening
+
+- **Keep `agent.toml` mode 600**, owned by `root`. The API key is the credential.
+- **Don't disable** `Restart=on-failure` or the `OnFailure=` rollback unit; they're what makes self-updates safe.
+- **Snapshot `<data_dir>/nodes/`** out of band if you want point-in-time backups of node state — there is no built-in snapshot mechanism on the agent side.
+- **Restrict outbound** to the control plane URL plus the per-chain client download mirrors if you want strict egress.
+
+## Next steps
+
+- [Deploy a node](/en/nodes/deploy-a-node) onto your fresh executor.
+- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — what to do when an upgrade goes sideways.
+- [Rotate executor API keys](/en/infrastructure/rotate-api-keys) — zero-downtime key rotation.

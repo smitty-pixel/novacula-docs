@@ -1,0 +1,66 @@
+---
+title: "Executors overview"
+description: "What an executor is, how it talks to the control plane, and what flows in each direction"
+---
+
+An **executor** is a piece of Novacula software you install on your own infrastructure. It authenticates to the control plane with an [API key](/en/account/api-keys), polls outbound for work assigned to it, reconciles desired-state specs into actual blockchain client processes, and reports observed status back. Everything that happens to a node — start, config edit, version upgrade, stop, delete — is mediated by an executor.
+
+## Two backends
+
+| Backend | Runs on | Materializes a node as |
+| --- | --- | --- |
+| **[Agent](/en/executors/agent-bare-metal)** | A Linux host (Ubuntu 22.04+, Debian 12+) | A set of `systemd` services |
+| **[Operator](/en/executors/operator-kubernetes)** | A Kubernetes cluster (1.27+) | A `BlockchainNode` CR → `ConfigMap` + `StatefulSet` |
+
+Both implement the same `ChainAdapter` interface, so the same node spec is meaningful under either. See [Execution backends](/en/platform/execution-backends) for the comparison.
+
+## What flows in each direction
+
+```
+┌────────────────────┐        outbound HTTPS         ┌─────────────────────┐
+│   Control plane    │ ◄──── syncExecutor (5s) ──── │      Executor       │
+│  (Novacula cloud)  │ ◄──── ObservedNodeState ──── │ (your infrastructure)│
+│                    │ ────► NodeSpec (latest rev)  │                     │
+│                    │ ────► AgentUpgradeSpec /     │                     │
+│                    │       OperatorUpgradeSpec    │                     │
+└────────────────────┘                              └─────────────────────┘
+```
+
+The executor is the only side that opens connections. The control plane never reaches into your network.
+
+## Executor identity
+
+Each executor has a server-side row keyed by `(organizationId, name)`. The row carries:
+
+- **`kind`** — `agent` or `operator`. Set on first sync, immutable after that.
+- **`capabilities`** — JSON blob declaring which chains, networks, clients, versions, and node types this executor can run. See [Executor capabilities](/en/executors/executor-capabilities).
+- **`currentVersion`** — the executor binary version reported on every sync.
+- **`channel`** — which release channel this executor follows (`stable`, `beta`, or internal `dev`). Drives the [available upgrades](/en/executors/upgrade-executor) list.
+- **`updatedAt`** — refreshed on every sync. The `status` virtual field returns `online` if `now() − updatedAt < HEARTBEAT_TIMEOUT_MS` (30s default), otherwise `offline`.
+
+If a `syncExecutor` call comes in for an unknown name, the row is created on the spot — that's how new executors register themselves.
+
+## Lifecycle from the UI
+
+| Action | What it does |
+| --- | --- |
+| **Connect new executor** | Issues an API key + shows the install command. See [Connect an executor](/en/executors/connect-an-executor). |
+| **View executor** | Shows status, capabilities, hosted nodes, recent events, last API-key usage. |
+| **Upgrade executor** | Records a pending upgrade spec; the executor picks it up on its next sync. See [Upgrade an executor](/en/executors/upgrade-executor). |
+| **Deactivate executor** | Disables the API key and orphans the row. See [Deactivate an executor](/en/executors/deactivate-executor). |
+
+## Compatibility window
+
+The control plane and executor each carry a major version. Compatibility is checked on every sync:
+
+- **In-window** — executor major == CP major. Full functionality.
+- **Deprecated** — executor major == CP major − 1. Sync still succeeds; UI surfaces a deprecation banner. Plan an upgrade before the next CP major release.
+- **Out-of-support** — executor major < CP major − 1. `syncExecutor` continues to accept heartbeats and serve upgrade specs, but `nodes` queries return `409 Conflict` until you upgrade.
+
+This is enforced by `compatWindowStatus()` in `@vos/protocol`.
+
+## Where to start
+
+- [Connect an executor](/en/executors/connect-an-executor) — bring one up from zero.
+- [Provision on Kubernetes](/en/infrastructure/provision-on-kubernetes) or [Provision on bare-metal](/en/infrastructure/provision-on-bare-metal) — backend-specific install detail.
+- [Executor capabilities](/en/executors/executor-capabilities) — what an executor declares and how the deploy wizard uses it.

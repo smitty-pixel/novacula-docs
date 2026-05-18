@@ -1,0 +1,145 @@
+---
+title: "Provision an executor on Kubernetes"
+description: "Install the Novacula Operator with Helm and connect it to your organization"
+---
+
+This guide takes you from a fresh Kubernetes cluster to a registered, online Operator executor. End-state: a single `novacula-operator` `Deployment` is running, the CRD `blockchainnodes.validatoros.com` is registered, the control plane sees the executor as `online`, and you can deploy nodes from the UI.
+
+For the conceptual overview of what the Operator is, see [Operator (Kubernetes)](/en/executors/operator-kubernetes).
+
+## Prerequisites
+
+- **Kubernetes** — 1.27 or newer.
+- **Cluster-admin** at install time (the operator auto-applies its CRD on first start).
+- **A storage class** suitable for blockchain workloads — typically a CSI provider with `WaitForFirstConsumer` binding, fast NVMe-backed for chains like Sui.
+- **Outbound HTTPS** from the operator pod to the control plane URL.
+- **An API key** of `kind = operator` — see [Connect an executor](/en/executors/connect-an-executor).
+
+## Steps
+
+<Steps>
+  <Step title="Add the chart repository">
+    ```bash
+    helm repo add novacula https://<your-charts-repo>
+    helm repo update
+    ```
+
+    The exact repo URL is provided in your **Connect new executor** install command.
+  </Step>
+  <Step title="Create the namespace + secret">
+    ```bash
+    kubectl create namespace novacula-system
+
+    kubectl -n novacula-system create secret generic novacula-operator-auth \
+      --from-literal=accessToken=<api-key-from-connect-step>
+    ```
+
+    Storing the API key as a `Secret` keeps it out of `values.yaml` and out of any GitOps history that would store rendered manifests in plaintext.
+  </Step>
+  <Step title="Install the chart">
+    A minimal `values.yaml`:
+
+    ```yaml
+    operator:
+      controlPlaneUrl: https://<your-control-plane>
+      operatorName: ops-cluster-1     # unique within your org
+      channel: stable                 # or "beta"
+      healthPort: 8080
+
+      auth:
+        existingSecret: novacula-operator-auth
+        secretKey: accessToken
+
+      # Optional — heavier than defaults if your fleet runs many nodes
+      metricsIntervalMs: 5000
+      scrapeTimeoutMs: 5000
+    ```
+
+    Install:
+
+    ```bash
+    helm install novacula-operator novacula/novacula-operator \
+      -n novacula-system \
+      -f values.yaml
+    ```
+
+    The chart deploys:
+
+    - One `Deployment` (single replica) for the operator pod.
+    - `RBAC` for the operator's `ServiceAccount` — namespace permissions for `pods`, `services`, `configmaps`, `statefulsets`, `persistentvolumeclaims`, plus cluster-scoped `customresourcedefinitions` (CRD apply needs this once).
+    - A `Service` exposing the operator's health port (used by the chart's liveness/readiness probes).
+  </Step>
+  <Step title="Confirm the CRD applied">
+    ```bash
+    kubectl get crd blockchainnodes.validatoros.com
+    kubectl get crd blockchainnodes.validatoros.com -o jsonpath='{.spec.versions[0].name}'
+    # → v1alpha1
+    ```
+
+    The operator applies the CRD on startup. If it doesn't show up, check the operator logs — it usually means the install user lacked CRD write permissions.
+  </Step>
+  <Step title="Confirm online in the UI">
+    ```bash
+    kubectl logs -n novacula-system deploy/novacula-operator -f
+    ```
+
+    First few log lines should include `executor registered`, `capabilities reported`, and a probe of available `StorageClass` objects. The executor row in the UI flips to `online` within seconds.
+
+    If it stays offline:
+
+    - Check operator logs for auth errors.
+    - Confirm outbound HTTPS to the control plane URL.
+    - Verify the `Secret`'s `accessToken` key matches `secretKey` in `values.yaml`.
+  </Step>
+</Steps>
+
+## What lives in the cluster
+
+Static (chart-managed):
+
+```
+namespace/novacula-system
+├── deployment/novacula-operator
+├── serviceaccount/novacula-operator
+├── role + rolebinding (namespace ops)
+├── clusterrole + clusterrolebinding (CRD apply)
+└── secret/novacula-operator-auth   ← you created this
+```
+
+Dynamic (operator-managed, one set per deployed node):
+
+```
+blockchainnode/<name>                ← CR
+configmap/<name>                     ← rendered config files
+statefulset/<name>                   ← node pods
+service/<name>                       ← headless service
+persistentvolumeclaim/<name>-data    ← per-storage spec
+```
+
+All carry labels like `novacula.com/node=<name>` for easy `kubectl get -l`.
+
+## Operating
+
+```bash
+kubectl get blockchainnodes -A
+kubectl describe bn <name>
+kubectl logs -l novacula.com/node=<name> -c <role> -f
+
+helm upgrade novacula-operator novacula/novacula-operator -n novacula-system -f values.yaml
+helm uninstall novacula-operator -n novacula-system
+```
+
+The operator's own self-update is initiated from the UI — see [Upgrade an executor](/en/executors/upgrade-executor). You only run `helm upgrade` for chart-level changes (rbac, env vars, resource requests on the operator pod).
+
+## Hardening
+
+- **Keep the `Secret` namespaced**, with RBAC limiting who in the cluster can read it.
+- **Pin the operator image tag** in `values.yaml` and let UI-driven self-updates manage it from there.
+- **Restrict egress** from `novacula-system` to the control plane URL (and any per-chain image registries) if you have a NetworkPolicy regime.
+- **PodSecurity** — the chart targets a `restricted`-baseline-compatible pod spec.
+
+## Next steps
+
+- [Deploy a node](/en/nodes/deploy-a-node) onto your fresh executor.
+- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — recovery if a self-update wedges the operator.
+- [Rotate executor API keys](/en/infrastructure/rotate-api-keys) — rotate the `Secret` value with no downtime.

@@ -1,0 +1,127 @@
+---
+title: "Configuration reference"
+description: "Every configurable knob across the control plane, agent, and operator"
+---
+
+This page is the canonical list of every configurable parameter for each Novacula component. For the env vars specifically, see [Environment variables](/en/reference/environment-variables) — that page is the authoritative env-var index.
+
+## Control plane
+
+The control plane is configured **entirely through environment variables**, validated at startup with `class-validator`. There is no config file. Missing or malformed values fail fast with a typed error.
+
+Required:
+
+| Variable | Type | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | string | libSQL / SQLite URL for the primary database |
+| `BETTER_AUTH_URL` | string | Public URL the better-auth server is reachable at |
+| `BETTER_AUTH_SECRET` | string ≥32 | Secret used to sign session cookies and tokens |
+| `INITIAL_ADMIN_EMAIL` | email | First system-admin user created on a fresh database |
+| `INITIAL_ADMIN_PASSWORD` | string ≥12 | First system-admin password |
+
+Optional with defaults:
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` | HTTP port |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `HEARTBEAT_TIMEOUT_MS` | `30000` | Executor goes `offline` after this much silence; must be longer than the executor's poll interval (default 5s) with headroom |
+| `EVENT_RETENTION_DAYS` | `90` | Runtime events older than this are pruned |
+| `EVENT_RETENTION_MAX_PER_ORG` | `100000` | Hard cap on per-org runtime events; oldest pruned beyond this |
+
+See [Environment variables](/en/reference/environment-variables) for the same list with copy-pastable examples.
+
+## Agent
+
+The agent reads a TOML file (default `/etc/novacula/agent.toml`). Path can be set via:
+
+1. The `--config` / `-c` flag.
+2. The `NOVACULA_CONFIG` env var.
+3. The default `/etc/novacula/agent.toml`.
+
+```toml
+[agent]
+name        = "agent-1"             # required if HOSTNAME isn't unique
+data_dir    = "/var/lib/novacula"   # default
+public_host = "agent-1.example.com" # optional; surfaces on the executor row
+channel     = "stable"              # "stable" | "beta" | "dev" — default "stable"
+
+[control_plane]
+url          = "https://cp.example.com"   # required
+access_token = "..."                       # required, or stored in <data_dir>/credentials.json
+
+[logging]
+level  = "info"                            # default "info"
+format = "json"                            # "json" | "pretty" — default "json"
+
+[reconciler]
+interval_secs = 5                          # default 5
+
+[reporter]
+interval_secs    = 10                      # default 10
+scrape_timeout_ms = 5000                   # default 5000
+```
+
+### `[agent]`
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `name` | `$HOSTNAME` then `agent` | Unique identifier within the org. Becomes the executor row's `name` |
+| `data_dir` | `/var/lib/novacula` | Root for binaries, configs, per-node data. Must be writable by root |
+| `public_host` | unset | Optional FQDN for cosmetic display in the UI. Validated as `[a-zA-Z0-9](.\|-)*[a-zA-Z0-9]` |
+| `channel` | `stable` | Release channel for self-upgrade candidates |
+
+### `[control_plane]`
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `url` | (required) | Base URL of the control plane (no trailing slash) |
+| `access_token` | (required, or in `credentials.json`) | The API key issued from the UI's **Connect new executor** flow |
+
+### `[logging]`
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `level` | `info` | `debug` / `info` / `warn` / `error` |
+| `format` | `json` | `json` for machine-readable; `pretty` for terminal use |
+
+### `[reconciler]`
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `interval_secs` | `5` | Reconcile loop cadence. Lower = more responsive to spec changes, higher = less load on the host |
+
+### `[reporter]`
+
+| Key | Default | Description |
+| --- | --- | --- |
+| `interval_secs` | `10` | Reporter loop cadence (per-process metric scrape + push) |
+| `scrape_timeout_ms` | `5000` | Per-scrape timeout. Process counted as `error` after this many ms with no response |
+
+## Operator
+
+The operator is configured **entirely through environment variables**, set by the Helm chart. There is no config file.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `NOVACULA_CONTROL_PLANE_URL` | (required) | Base URL of the control plane |
+| `NOVACULA_ACCESS_TOKEN` | unset | API key. Typically delivered via a `Secret` referenced from the chart |
+| `NOVACULA_OPERATOR_NAME` | hostname | Unique within the org. Becomes the executor row's `name` |
+| `NOVACULA_OPERATOR_NAMESPACE` | `novacula-system` | Namespace the operator deploys nodes into |
+| `NOVACULA_OPERATOR_CHANNEL` | `stable` | Release channel for self-upgrade candidates |
+| `NOVACULA_OPERATOR_HEALTH_PORT` | `8080` | Liveness/readiness probe HTTP port |
+| `NOVACULA_OPERATOR_CONTAINER_NAME` | `operator` | Name of the operator container in the chart's pod template; the self-update path patches this container by name |
+| `NOVACULA_METRICS_INTERVAL_MS` | `5000` | Reporter loop cadence |
+| `NOVACULA_SCRAPE_TIMEOUT_MS` | `5000` | Per-scrape timeout |
+
+Most users only set the first three (`URL`, `ACCESS_TOKEN`, `NAME`) directly and let the chart's defaults handle the rest.
+
+## Per-node configuration
+
+Per-node config (resource requests, custom config-file overrides, CLI arg overrides, sidecars) is **not** in any of the configs above — it lives in the `NodeSpec` written by the control plane. See [Edit node configuration](/en/nodes/edit-configuration).
+
+## Related
+
+- [Environment variables](/en/reference/environment-variables) — env-var-only index.
+- [Agent CLI](/en/reference/agent-cli) — operator-side commands.
+- [GraphQL API](/en/reference/graphql-api) — programmatic API surface.

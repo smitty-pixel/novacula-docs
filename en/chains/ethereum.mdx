@@ -1,0 +1,92 @@
+---
+title: "Ethereum"
+description: "Two-role (EL + CL) nodes — Geth / Reth / Nethermind / Erigon × Lighthouse / Prysm / Lodestar"
+---
+
+Ethereum is the only multi-process chain in Novacula. Every Ethereum node is two processes: an **execution-layer (EL)** client and a **consensus-layer (CL)** client. They communicate over the JWT-authenticated Engine API on `127.0.0.1:8551`. The chain adapter generates a JWT secret on first start, configures both processes to use it, and exposes them as two roles in the UI.
+
+## Networks and resources
+
+| Network | CPU | RAM | Disk (Full) | Notes |
+| --- | --- | --- | --- | --- |
+| `mainnet` | 4 cores | 16 GiB | 2548 GiB | EL + CL share one PVC; subdirs `/data/el` and `/data/cl` |
+| `sepolia` | 2 cores | 8 GiB | 300 GiB | |
+| `hoodi` | 2 cores | 8 GiB | 300 GiB | New testnet; minimum client versions enforced |
+
+Hoodi enforces these minimum client versions (rejected at deploy time if violated):
+
+| Client | Minimum |
+| --- | --- |
+| Geth | `>=1.15.0` |
+| Reth | `>=2.0.0` |
+| Nethermind | `>=1.31.9` |
+| Erigon | `>=3.0.2` |
+| Prysm | `>=7.1.0` |
+
+Archive node disk requirement is significantly higher than Full — the adapter pre-fills with the right value when you select Archive in the wizard.
+
+## Clients
+
+| Role | Clients |
+| --- | --- |
+| **EL** | `geth`, `reth`, `nethermind`, `erigon` |
+| **CL** | `lighthouse`, `prysm`, `lodestar` |
+
+Pick one of each independently in the deploy wizard. All EL × CL combinations are supported; pick the pair your team has the most operational experience with.
+
+## Ports
+
+| Name | Port | Owner |
+| --- | --- | --- |
+| EL RPC (HTTP) | `8545` | EL |
+| EL RPC (WebSocket) | `8546` | EL |
+| EL P2P | `30303` | EL |
+| Engine API | `8551` | EL ↔ CL (JWT-secured, localhost) |
+| EL metrics | `6060` | EL |
+| CL beacon API | `5052` | CL |
+| CL P2P | `9000` | CL |
+| CL metrics | `5054` | CL |
+
+Engine API is bound to `127.0.0.1` and not user-overridable. EL and CL P2P need to be reachable from peers; if you're behind NAT, configure your firewall accordingly.
+
+## Init steps
+
+On first reconcile per node:
+
+1. **JWT secret** — generated and written to a path both processes can read; injected into both clients' command lines.
+2. **Checkpoint sync URL** (CL only, optional) — the adapter knows trusted defaults for `mainnet` (sigp), `hoodi`, and `sepolia` (ethpandaops). Override with the `--checkpoint-sync-url` (`--checkpointSyncUrl` for Lodestar, plus `--genesis-beacon-api-url` for Prysm) free-form arg.
+
+## Config overrides
+
+Ethereum uses **CLI argument overrides** per process. The adapter declares managed flags per client (the obvious data-dir / port / Engine API / JWT bindings) and a small set of known flags:
+
+- All CL clients accept `--checkpoint-sync-url` (Prysm: `--checkpoint-sync-url` + `--genesis-beacon-api-url`; Lodestar: `--checkpointSyncUrl`) — first-class field in the deploy wizard.
+- Anything else not on the managed list is passed through to the underlying binary.
+
+For the full managed-flag list per client, see the per-client schemas in `packages/adapter/src/ethereum/<client>.ts`.
+
+## Sync strategies
+
+- **Full from genesis** — slow but no trust assumptions on the CL side.
+- **Checkpoint sync (CL)** — fast: CL fetches a recent finalized state from a trusted checkpoint URL, then EL syncs using the snap-sync flow. This is the default for new mainnet deployments.
+- **Snapshot restore (EL)** — replace EL data directory with a pre-synced snapshot from your own infrastructure. Manual step.
+
+The first two are first-class. Snapshot restore is supported but you provide the snapshot.
+
+## Metrics
+
+Both processes are scraped on each reporter tick. Surfaced:
+
+- Per-process status (`starting` / `running` / `syncing`).
+- EL: chain head, peer count, sync progress.
+- CL: head slot, current epoch, validator count, peers.
+- Per-process CPU + memory.
+- Disk usage for the shared PVC.
+
+See [Node monitoring](/en/nodes/monitoring).
+
+## Common patterns
+
+- **Validator** — a Full node + your validator client (run separately, points at the CL beacon API). The platform doesn't manage the validator client itself.
+- **RPC provider** — Geth or Erigon Full + a CL of your choice; expose `:8545` to your reverse proxy.
+- **Archive** — Geth or Erigon in Archive mode; substantially larger disk, considerably longer initial sync.

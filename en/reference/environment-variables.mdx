@@ -1,0 +1,78 @@
+---
+title: "Environment variables"
+description: "Every environment variable read by the control plane, agent, and operator at startup"
+---
+
+The single source of truth for env-var configuration across all three components. For the broader configuration model (TOML for the agent, env-only for the others), see [Configuration reference](/en/reference/configuration).
+
+## Control plane
+
+Validated at startup with `class-validator` (`apps/control-plane/src/config/env.ts`). Missing or malformed values fail fast.
+
+### Required
+
+| Variable | Description | Example |
+| --- | --- | --- |
+| `DATABASE_URL` | libSQL / SQLite URL for the primary database | `file:/var/lib/novacula/cp.db`, `libsql://...` |
+| `BETTER_AUTH_URL` | Public URL the better-auth server is reachable at | `https://novacula.example.com` |
+| `BETTER_AUTH_SECRET` | ≥32 chars; signs session cookies and tokens | Generate with `openssl rand -base64 48` |
+| `INITIAL_ADMIN_EMAIL` | First system-admin user created on a fresh database | `ops@example.com` |
+| `INITIAL_ADMIN_PASSWORD` | ≥12 chars; first system-admin password | Long random string |
+
+### Optional
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` | HTTP port |
+| `LOG_LEVEL` | `info` | `debug` / `info` / `warn` / `error` |
+| `HEARTBEAT_TIMEOUT_MS` | `30000` | Executor `offline` after this much silence; **must exceed the executor poll interval** |
+| `EVENT_RETENTION_DAYS` | `90` | Runtime-event retention window |
+| `EVENT_RETENTION_MAX_PER_ORG` | `100000` | Per-org runtime-event cap |
+
+### Read by libraries
+
+`better-auth` reads `BETTER_AUTH_URL` and `BETTER_AUTH_SECRET` directly from `process.env`. They are also declared in the AppEnv schema so a missing value is caught at startup rather than later in AuthModule.
+
+## Agent
+
+The agent's primary config source is its TOML file. Two env vars affect what file is loaded and one of them substitutes for a TOML field.
+
+| Variable | Used for | Notes |
+| --- | --- | --- |
+| `NOVACULA_CONFIG` | Path to the agent TOML | Lower precedence than `--config` / `-c` flag |
+| `HOSTNAME` | Fallback for `[agent].name` | Used if neither config nor env sets it |
+
+The agent does not read other env vars at startup — everything else lives in the TOML. See [Configuration reference](/en/reference/configuration#agent) for the schema.
+
+## Operator
+
+The operator is configured **entirely through env vars**, set by the Helm chart.
+
+### Required
+
+| Variable | Description |
+| --- | --- |
+| `NOVACULA_CONTROL_PLANE_URL` | Base URL of the control plane (no trailing slash) |
+
+### Optional / typically chart-provided
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `NOVACULA_ACCESS_TOKEN` | unset | API key. Mount via a `Secret` |
+| `NOVACULA_OPERATOR_NAME` | `hostname()` | Unique within the org. Becomes the executor row's `name` |
+| `NOVACULA_OPERATOR_NAMESPACE` | `novacula-system` | Namespace nodes are deployed into |
+| `NOVACULA_OPERATOR_CHANNEL` | `stable` | Release channel for self-upgrades |
+| `NOVACULA_OPERATOR_HEALTH_PORT` | `8080` | Liveness/readiness HTTP port |
+| `NOVACULA_OPERATOR_CONTAINER_NAME` | `operator` | Container name the self-update path patches |
+| `NOVACULA_METRICS_INTERVAL_MS` | `5000` | Reporter loop cadence (ms) |
+| `NOVACULA_SCRAPE_TIMEOUT_MS` | `5000` | Per-process scrape timeout (ms) |
+
+## Notes on values
+
+- **Trailing slashes** on URLs — the control plane URL should be the bare base; trailing slashes can produce double-slash request paths against some endpoints.
+- **Secret material** — `BETTER_AUTH_SECRET`, `NOVACULA_ACCESS_TOKEN`, and the agent's `[control_plane].access_token` should never appear in plaintext in committed config. Use a secrets manager.
+- **Validation** — control plane validates `class-validator` constraints at startup; missing required fields print a typed error and exit. The agent's TOML loader throws on missing `[control_plane].url`. The operator's env loader throws on missing `NOVACULA_CONTROL_PLANE_URL`.
+
+## Related
+
+- [Configuration reference](/en/reference/configuration) — same data organized by component, with TOML / chart context.
