@@ -9,7 +9,7 @@ description: "Deploy the full Novacula stack inside your own network, with no ou
 
 ## What self-hosted means
 
-Self-hosted Novacula runs the entire platform — control plane, UI, and executors — inside the perimeter you operate. Nothing leaves your network at runtime; nothing in your network needs to reach the Novacula cloud. Suitable for environments where any outbound connection from validator infrastructure is unacceptable: regulated finance, sovereign deployments, classified networks, air-gapped private clouds.
+Self-hosted Novacula runs the entire platform — control plane, UI, and executors — inside the perimeter you operate. Nothing leaves your network at runtime; nothing in your network needs to reach the Novacula cloud. Suitable for environments where any outbound connection from node infrastructure is unacceptable: regulated finance, sovereign deployments, classified networks, air-gapped private clouds.
 
 In contrast, the standard [Cloud](/docs/introduction) deployment runs the control plane in Novacula's cloud and your executors poll outbound to it. Self-hosted moves the control plane onto your side of the boundary.
 
@@ -30,7 +30,7 @@ The application surface — UI, GraphQL API, chain adapters, agent and operator 
 
 ## What you get
 
-- **Air-gapped operation.** Validator nodes, executors, control plane, and UI all reach each other inside your network; no egress required.
+- **Air-gapped operation.** Blockchain nodes, executors, control plane, and UI all reach each other inside your network; no egress required.
 - **Bring-your-own infrastructure.** Run the control plane on your Kubernetes cluster with the same Helm-based ergonomics as the [Operator (Kubernetes)](/docs/executors/operator-kubernetes) executor backend.
 - **Bring-your-own identity.** Plug into your SSO / SAML / OIDC provider; sessions never touch Novacula's auth servers.
 - **Signed offline release bundles.** Executor binaries, container images, and chain-adapter updates ship as signed tarballs your release-management process mirrors into your private registry.

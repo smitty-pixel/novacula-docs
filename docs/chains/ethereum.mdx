@@ -87,6 +87,6 @@ See [Node monitoring](/docs/nodes/monitoring).
 
 ## Common patterns
 
-- **Validator** — a Full node + your validator client (run separately, points at the CL beacon API). The platform doesn't manage the validator client itself.
-- **RPC provider** — Geth or Erigon Full + a CL of your choice; expose `:8545` to your reverse proxy.
-- **Archive** — Geth or Erigon in Archive mode; substantially larger disk, considerably longer initial sync.
+- **RPC provider** (the typical case) — Geth, Reth, Nethermind, or Erigon in Full mode + the CL of your choice; expose `:8545` (HTTP) and `:8546` (WS) through your own reverse proxy or load balancer.
+- **Archive** — Geth or Erigon in Archive mode; substantially larger disk, considerably longer initial sync. Use for historical RPC (`eth_getBalance` at old blocks, debug/trace APIs).
+- **Beacon endpoint for an external validator client** — run a Full node here, then point your separately-operated validator client at the CL's beacon API on `:5052`. The platform itself does **not** manage the validator client; it just runs the EL + CL pair beneath it.

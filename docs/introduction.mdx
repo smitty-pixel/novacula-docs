@@ -1,9 +1,11 @@
 ---
 title: "Introduction"
-description: "B2B platform for managing blockchain nodes across bare-metal and Kubernetes"
+description: "B2B platform for running blockchain full nodes for RPC, across bare-metal and Kubernetes"
 ---
 
-Novacula is a B2B platform for operating blockchain nodes at scale. The control plane runs in the Novacula cloud; the nodes themselves run on infrastructure you control — bare-metal servers, Kubernetes clusters, or both — managed by lightweight executors that poll the control plane outbound.
+Novacula is a B2B platform for operating **blockchain full nodes for RPC** at scale — the kind you need to serve JSON-RPC, WebSocket, or gRPC endpoints for your apps, indexers, exchanges, MEV ops, or internal data tooling. The control plane runs in the Novacula cloud; the nodes themselves run on infrastructure you control — bare-metal servers, Kubernetes clusters, or both — managed by lightweight executors that poll the control plane outbound.
+
+The platform manages the full node and any required sidecars (e.g. Ethereum's EL + CL pair); it does **not** run a validator client or sign blocks. If you also operate a validator, run it separately and point it at the beacon API of the CL the platform runs for you.
 
 <CardGroup cols={2}>
   <Card title="Quickstart" icon="rocket" href="/docs/get-started/quickstart">

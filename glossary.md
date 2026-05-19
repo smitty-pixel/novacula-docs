@@ -1,27 +1,33 @@
 # Glossary
 
-Single source of truth for terminology across all locales. Use these translations consistently — do not introduce synonyms in `ru/` pages.
+Canonical terminology for the Novacula docs. Use these terms consistently; don't introduce synonyms.
 
-| English (canonical) | Русский | Notes |
-| --- | --- | --- |
-| validator node | узел-валидатор | Blockchain validator participant |
-| control plane | control plane | Do not translate — product/component name |
-| agent | агент | Bare-metal daemon |
-| operator | оператор | Kubernetes operator |
-| executor | executor | Do not translate — internal component name |
-| chain adapter | адаптер сети | Per-chain implementation |
-| desired state | желаемое состояние | Reconciliation target |
-| reconciler | reconciler | Do not translate — internal component name |
-| snapshot | снапшот | State snapshot from polling |
-| revision | ревизия | Spec versioning |
-| tenant | тенант | Multi-tenancy unit |
-| organization | организация | better-auth concept |
-| API key | API-ключ | Authentication credential |
-| session | сессия | Authentication session |
+| Term | Meaning |
+| --- | --- |
+| node | A blockchain full node managed by Novacula — one logical unit in the UI, one or more processes on the executor side |
+| process | A single OS service or container belonging to a node (e.g. Ethereum: EL process + CL process) |
+| full node | Default node type — keeps recent state; serves the standard RPC surface |
+| archive node | A node retaining full historical state (Ethereum, BSC); larger disk, slower initial sync, supports debug/trace RPCs at any block height |
+| control plane | The Novacula SaaS service (or its self-hosted equivalent) that stores desired-state specs and serves the UI / GraphQL API |
+| executor | A Novacula agent or operator instance running in your infrastructure that polls the control plane and reconciles node specs |
+| agent | Bare-metal executor backend; manages nodes as `systemd` services on a Linux host |
+| operator | Kubernetes executor backend; manages nodes as a `BlockchainNode` CR → `ConfigMap` + `StatefulSet` |
+| chain adapter | Per-chain implementation of the `ChainAdapter` interface (config generation, install, init steps, port plan, metrics) |
+| reconciler | Loop inside an executor that diffs `desired` vs `observed` and applies changes |
+| desired state | The target spec the control plane stores for a node; what the reconciler converges to |
+| observed state | The latest state report the executor pushes back for a node |
+| revision | Monotonically increasing version on a node's spec; used to detect drift between desired and observed |
+| capabilities | The set of chains, networks, clients, versions, and node types an executor declares it can run, sent on every sync |
+| snapshot | An external pre-synced data directory (e.g. Tron `/backup<date>/`) used to bootstrap a node faster than syncing from genesis |
+| organization | Tenant boundary in the platform (better-auth concept); everything is scoped to one |
+| API key | Org-scoped credential an executor or external script presents to authenticate with the control plane |
+| session | Browser/IDE login session tied to a user and an active organization |
 
-## Do not translate
+## Don't use these terms for Novacula
 
-These terms must remain in English in all locales:
+- **Validator node / validator** — Novacula manages blockchain nodes, not validators. "Validator" is fine when referring to external chain entities (e.g. Sui validator-network P2P seeds, "point your validator client at the beacon API") but never to describe what the platform itself does.
+
+## Keep in English everywhere
 
 - Product, component, and service names: `Novacula`, `control plane`, `executor`, `reconciler`, `agent`, `operator`
 - Technology names: `Bun`, `NestJS`, `Prisma`, `libSQL`, `GraphQL`, `Apollo`, `Kubernetes`, `Helm`, `systemd`, `Docker`, `Vite`, `React`, `TanStack Router`, `Tailwind`, `CASL`, `better-auth`, `Biome`

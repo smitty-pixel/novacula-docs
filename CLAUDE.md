@@ -41,7 +41,9 @@ The navigation switcher in the rendered docs is a **deployment-mode dropdown** (
 
 ## Product context
 
-Novacula is a B2B platform for managing blockchain validator nodes. Key concepts the docs cover:
+Novacula is a B2B platform for operating **blockchain full nodes for RPC** — JSON-RPC, WebSocket, and gRPC endpoints — on your own infrastructure, at scale. Customers are teams that need to run nodes themselves rather than depend on a public RPC provider: app teams, indexers, exchanges, MEV ops, internal data platforms. The platform does **not** run validator clients or consensus signing; it manages the underlying node (e.g. Geth + Lighthouse pair for Ethereum) that a validator could be pointed at separately.
+
+Key concepts the docs cover:
 
 - **Control plane**: NestJS + Apollo GraphQL service; desired-state model, pushes specs with revisions.
 - **Two execution backends** share the same `ChainAdapter` interface:
@@ -50,6 +52,8 @@ Novacula is a B2B platform for managing blockchain validator nodes. Key concepts
 - **Outbound-only**: executors initiate HTTP polling connections to the control plane.
 - One node = N processes (e.g. Ethereum: EL + CL). Each process = a separate OS service or container.
 - **Two deployment modes**: **Cloud** (control plane operated by Novacula) and **Self-hosted** (full stack inside the customer's network). Cloud is fully documented; self-hosted is "coming soon".
+
+When writing positioning copy, **don't use "validator" to describe Novacula's purpose** — the platform manages nodes, not validators. "Validator" is fine when referring to external chain entities (e.g. Sui validator-network P2P seeds, Ethereum CL `validator count` metric, "point your validator client at the beacon API").
 
 ## Conventions
 
