@@ -1,0 +1,57 @@
+---
+title: "Self-hosted Novacula"
+description: "Deploy the full Novacula stack inside your own network, with no outbound dependency on the Novacula cloud"
+---
+
+<Note>
+**Coming soon.** Self-hosted Novacula is in active development. This page describes the model; an install guide, Helm charts, and offline release artifacts will land here as they ship. Until then, the [Cloud](/docs/introduction) deployment is the only supported way to run Novacula.
+</Note>
+
+## What self-hosted means
+
+Self-hosted Novacula runs the entire platform — control plane, UI, and executors — inside the perimeter you operate. Nothing leaves your network at runtime; nothing in your network needs to reach the Novacula cloud. Suitable for environments where any outbound connection from validator infrastructure is unacceptable: regulated finance, sovereign deployments, classified networks, air-gapped private clouds.
+
+In contrast, the standard [Cloud](/docs/introduction) deployment runs the control plane in Novacula's cloud and your executors poll outbound to it. Self-hosted moves the control plane onto your side of the boundary.
+
+## The model
+
+| Concern | Cloud | Self-hosted |
+| --- | --- | --- |
+| Control plane | Operated by Novacula | Operated by your team |
+| Where it runs | Novacula's cloud | Your Kubernetes cluster (Helm chart) |
+| Database | Managed by Novacula | Your libSQL / SQLite deployment |
+| Auth | Better-auth managed by Novacula | Better-auth in your cluster; optional SSO/SAML |
+| Outbound from your network | Executors → Novacula cloud | None required |
+| Release delivery | Continuous, pulled by executors | Signed offline bundles you mirror internally |
+| Updates and patches | Automatic | Pulled from a private mirror you control |
+| Telemetry to Novacula | Aggregate, opt-in | None |
+
+The application surface — UI, GraphQL API, chain adapters, agent and operator backends — is identical between the two deployment modes. Switching between them is a matter of where the control plane runs, not what it does.
+
+## What you get
+
+- **Air-gapped operation.** Validator nodes, executors, control plane, and UI all reach each other inside your network; no egress required.
+- **Bring-your-own infrastructure.** Run the control plane on your Kubernetes cluster with the same Helm-based ergonomics as the [Operator (Kubernetes)](/docs/executors/operator-kubernetes) executor backend.
+- **Bring-your-own identity.** Plug into your SSO / SAML / OIDC provider; sessions never touch Novacula's auth servers.
+- **Signed offline release bundles.** Executor binaries, container images, and chain-adapter updates ship as signed tarballs your release-management process mirrors into your private registry.
+- **Same data model, same GraphQL API.** Any integration you build against Cloud's [GraphQL API](/reference/graphql-api) will work unchanged.
+
+## What's coming
+
+The first self-hosted release will ship:
+
+- A **`novacula-control-plane`** Helm chart that stands up the API, UI, database, and auth in one namespace.
+- An **offline release bundle** format for executor and chain-client artifacts, signed with the same minisign trust roots already used by the agent's self-update path.
+- A guide for **mirroring** releases into a private OCI registry and configuring executors to pull from it.
+- Reference architectures for **highly-restricted networks** (no DNS, no HTTPS egress, private root CA).
+
+## Get on the list
+
+If you're evaluating self-hosted Novacula, reach out to your account contact so we can include your requirements in the first cut. Constraints we want to hear about up front:
+
+- Compliance regime (PCI, SOC 2, ISO 27001, FedRAMP, ...).
+- Identity provider and required auth flows.
+- Network constraints (proxy, no-DNS, private CA, ...).
+- Cluster topology (single cluster, multi-region, edge).
+
+The more we know early, the better the first release will fit.

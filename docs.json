@@ -9,10 +9,11 @@
     "dark": "#0D9373"
   },
   "navigation": {
-    "languages": [
+    "dropdowns": [
       {
-        "language": "en",
-        "default": true,
+        "dropdown": "Cloud",
+        "description": "Managed Novacula deployment",
+        "icon": "cloud",
         "tabs": [
           {
             "tab": "Guides",
@@ -20,74 +21,74 @@
               {
                 "group": "Get Started",
                 "pages": [
-                  "en/introduction",
-                  "en/get-started/quickstart",
-                  "en/get-started/key-concepts"
+                  "docs/introduction",
+                  "docs/get-started/quickstart",
+                  "docs/get-started/key-concepts"
                 ]
               },
               {
                 "group": "Platform",
                 "pages": [
-                  "en/platform/architecture",
-                  "en/platform/desired-state-model",
-                  "en/platform/execution-backends",
-                  "en/platform/chains-and-networks",
-                  "en/platform/roles-and-permissions"
+                  "docs/platform/architecture",
+                  "docs/platform/desired-state-model",
+                  "docs/platform/execution-backends",
+                  "docs/platform/chains-and-networks",
+                  "docs/platform/roles-and-permissions"
                 ]
               },
               {
                 "group": "Account",
                 "pages": [
-                  "en/account/account",
-                  "en/account/organization",
-                  "en/account/members-and-invitations",
-                  "en/account/api-keys",
-                  "en/account/sessions"
+                  "docs/account/account",
+                  "docs/account/organization",
+                  "docs/account/members-and-invitations",
+                  "docs/account/api-keys",
+                  "docs/account/sessions"
                 ]
               },
               {
                 "group": "Executors",
                 "pages": [
-                  "en/executors/overview",
-                  "en/executors/connect-an-executor",
-                  "en/executors/executor-capabilities",
-                  "en/executors/upgrade-executor",
-                  "en/executors/deactivate-executor",
-                  "en/executors/agent-bare-metal",
-                  "en/executors/operator-kubernetes"
+                  "docs/executors/overview",
+                  "docs/executors/connect-an-executor",
+                  "docs/executors/executor-capabilities",
+                  "docs/executors/upgrade-executor",
+                  "docs/executors/deactivate-executor",
+                  "docs/executors/agent-bare-metal",
+                  "docs/executors/operator-kubernetes"
                 ]
               },
               {
                 "group": "Nodes",
                 "pages": [
-                  "en/nodes/overview",
-                  "en/nodes/deploy-a-node",
-                  "en/nodes/node-lifecycle",
-                  "en/nodes/edit-configuration",
-                  "en/nodes/upgrade-node",
-                  "en/nodes/groups-and-tags",
-                  "en/nodes/logs",
-                  "en/nodes/monitoring"
+                  "docs/nodes/overview",
+                  "docs/nodes/deploy-a-node",
+                  "docs/nodes/node-lifecycle",
+                  "docs/nodes/edit-configuration",
+                  "docs/nodes/upgrade-node",
+                  "docs/nodes/groups-and-tags",
+                  "docs/nodes/logs",
+                  "docs/nodes/monitoring"
                 ]
               },
               {
                 "group": "Notifications & Events",
                 "pages": [
-                  "en/notifications/events-feed",
-                  "en/notifications/alert-rules",
-                  "en/notifications/webhooks",
-                  "en/notifications/per-node-overrides"
+                  "docs/notifications/events-feed",
+                  "docs/notifications/alert-rules",
+                  "docs/notifications/webhooks",
+                  "docs/notifications/per-node-overrides"
                 ]
               },
               {
                 "group": "Supported Chains",
                 "pages": [
-                  "en/chains/overview",
-                  "en/chains/bitcoin",
-                  "en/chains/bsc",
-                  "en/chains/ethereum",
-                  "en/chains/sui",
-                  "en/chains/tron"
+                  "docs/chains/overview",
+                  "docs/chains/bitcoin",
+                  "docs/chains/bsc",
+                  "docs/chains/ethereum",
+                  "docs/chains/sui",
+                  "docs/chains/tron"
                 ]
               }
             ]
@@ -96,12 +97,12 @@
             "tab": "Recipes",
             "groups": [
               {
-                "group": "Infrastructure",
+                "group": "Recipes",
                 "pages": [
-                  "en/infrastructure/provision-on-kubernetes",
-                  "en/infrastructure/provision-on-bare-metal",
-                  "en/infrastructure/rotate-api-keys",
-                  "en/infrastructure/apply-upgrades"
+                  "recipes/provision-on-kubernetes",
+                  "recipes/provision-on-bare-metal",
+                  "recipes/rotate-api-keys",
+                  "recipes/apply-upgrades"
                 ]
               }
             ]
@@ -112,10 +113,10 @@
               {
                 "group": "Reference",
                 "pages": [
-                  "en/reference/graphql-api",
-                  "en/reference/configuration",
-                  "en/reference/environment-variables",
-                  "en/reference/agent-cli"
+                  "reference/graphql-api",
+                  "reference/configuration",
+                  "reference/environment-variables",
+                  "reference/agent-cli"
                 ]
               }
             ]
@@ -126,7 +127,7 @@
               {
                 "group": "Release notes",
                 "pages": [
-                  "en/release-notes"
+                  "release-notes/release-notes"
                 ]
               }
             ]
@@ -134,123 +135,14 @@
         ]
       },
       {
-        "language": "ru",
-        "tabs": [
+        "dropdown": "Self-hosted",
+        "description": "Deploy Novacula in your private network",
+        "icon": "server",
+        "groups": [
           {
-            "tab": "Руководства",
-            "groups": [
-              {
-                "group": "Начало работы",
-                "pages": [
-                  "ru/introduction",
-                  "ru/get-started/quickstart",
-                  "ru/get-started/key-concepts"
-                ]
-              },
-              {
-                "group": "Платформа",
-                "pages": [
-                  "ru/platform/architecture",
-                  "ru/platform/desired-state-model",
-                  "ru/platform/execution-backends",
-                  "ru/platform/chains-and-networks",
-                  "ru/platform/roles-and-permissions"
-                ]
-              },
-              {
-                "group": "Аккаунт",
-                "pages": [
-                  "ru/account/account",
-                  "ru/account/organization",
-                  "ru/account/members-and-invitations",
-                  "ru/account/api-keys",
-                  "ru/account/sessions"
-                ]
-              },
-              {
-                "group": "Executors",
-                "pages": [
-                  "ru/executors/overview",
-                  "ru/executors/connect-an-executor",
-                  "ru/executors/executor-capabilities",
-                  "ru/executors/upgrade-executor",
-                  "ru/executors/deactivate-executor",
-                  "ru/executors/agent-bare-metal",
-                  "ru/executors/operator-kubernetes"
-                ]
-              },
-              {
-                "group": "Узлы",
-                "pages": [
-                  "ru/nodes/overview",
-                  "ru/nodes/deploy-a-node",
-                  "ru/nodes/node-lifecycle",
-                  "ru/nodes/edit-configuration",
-                  "ru/nodes/upgrade-node",
-                  "ru/nodes/groups-and-tags",
-                  "ru/nodes/logs",
-                  "ru/nodes/monitoring"
-                ]
-              },
-              {
-                "group": "Уведомления и события",
-                "pages": [
-                  "ru/notifications/events-feed",
-                  "ru/notifications/alert-rules",
-                  "ru/notifications/webhooks",
-                  "ru/notifications/per-node-overrides"
-                ]
-              },
-              {
-                "group": "Поддерживаемые сети",
-                "pages": [
-                  "ru/chains/overview",
-                  "ru/chains/bitcoin",
-                  "ru/chains/bsc",
-                  "ru/chains/ethereum",
-                  "ru/chains/sui",
-                  "ru/chains/tron"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Рецепты",
-            "groups": [
-              {
-                "group": "Инфраструктура",
-                "pages": [
-                  "ru/infrastructure/provision-on-kubernetes",
-                  "ru/infrastructure/provision-on-bare-metal",
-                  "ru/infrastructure/rotate-api-keys",
-                  "ru/infrastructure/apply-upgrades"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "API",
-            "groups": [
-              {
-                "group": "Справочник",
-                "pages": [
-                  "ru/reference/graphql-api",
-                  "ru/reference/configuration",
-                  "ru/reference/environment-variables",
-                  "ru/reference/agent-cli"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Релиз-заметки",
-            "groups": [
-              {
-                "group": "Релиз-заметки",
-                "pages": [
-                  "ru/release-notes"
-                ]
-              }
+            "group": "Self-hosted",
+            "pages": [
+              "self-hosted/introduction"
             ]
           }
         ]
