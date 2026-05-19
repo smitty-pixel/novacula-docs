@@ -5,7 +5,7 @@ description: "Org-scoped tokens that executors present to the control plane — 
 
 An **API key** is the credential an executor uses to authenticate with the control plane. Keys are scoped to an organization: a key issued under org A cannot be used to register an executor under org B.
 
-API keys are also the credential of choice for any external automation that wants to call the [GraphQL API](/en/reference/graphql-api).
+API keys are also the credential of choice for any external automation that wants to call the [GraphQL API](/reference/graphql-api).
 
 ## Create a key
 
@@ -31,7 +31,7 @@ Copy the key immediately and store it where you can retrieve it during install �
 
 The key list shows: name, purpose, created-by, expiry, and last-used timestamp. Common operations:
 
-- **Rotate** — issue a new key with the same metadata, immediately invalidating the old. The new key is shown once. Walk the new key out to the executor (see [Rotate executor API keys](/en/infrastructure/rotate-api-keys)) and the executor will pick it up on its next call.
+- **Rotate** — issue a new key with the same metadata, immediately invalidating the old. The new key is shown once. Walk the new key out to the executor (see [Rotate executor API keys](/recipes/rotate-api-keys)) and the executor will pick it up on its next call.
 - **Disable** — sets the key inactive without deleting the row. The executor will start failing `syncExecutor` and go offline within `HEARTBEAT_TIMEOUT_MS`.
 - **Delete** — removes the row entirely. Audit history of the key (which executors used it, when) is retained for compliance.
 
@@ -48,4 +48,4 @@ The key list shows: name, purpose, created-by, expiry, and last-used timestamp. 
 - **Rotate** any key that's been seen on a developer laptop or in a chat thread, even if you can't prove it leaked.
 - Use **disable** before delete when you're decommissioning an executor — gives you a 30s confirmation that the right key is being retired.
 
-See [Rotate executor API keys](/en/infrastructure/rotate-api-keys) for the zero-downtime rotation flow.
+See [Rotate executor API keys](/recipes/rotate-api-keys) for the zero-downtime rotation flow.

@@ -3,7 +3,7 @@ title: "Edit node configuration"
 description: "Change resources and config-file or CLI overrides on a running node"
 ---
 
-After deploy, the node detail page's **Configuration** tab shows the active spec read-only and an **Edit** action that walks you through the same forms as the [Deploy node wizard](/en/nodes/deploy-a-node), pre-filled with the current values.
+After deploy, the node detail page's **Configuration** tab shows the active spec read-only and an **Edit** action that walks you through the same forms as the [Deploy node wizard](/docs/nodes/deploy-a-node), pre-filled with the current values.
 
 ## What you can edit
 
@@ -11,7 +11,7 @@ After deploy, the node detail page's **Configuration** tab shows the active spec
 | --- | --- | --- |
 | Chain, network, node type | No | Pick at deploy; never changes for a given node. |
 | Client choice (e.g. `geth` vs `reth`) | No | Switching client = redeploy. |
-| Client version | Via [Upgrade a node](/en/nodes/upgrade-node) | Has its own dedicated flow. |
+| Client version | Via [Upgrade a node](/docs/nodes/upgrade-node) | Has its own dedicated flow. |
 | **CPU / RAM / disk requests + limits** | Yes | New values take effect on the next reconcile. Disk size can be **increased** but not decreased. |
 | **Storage class** (Operator only) | No | Storage class is bound at PVC creation. |
 | **Config-file overrides** | Yes | Per-process file (`bitcoin.conf`, `fullnode.yaml`, `config.conf`). Validated against the chain adapter's whitelist. |
@@ -20,7 +20,7 @@ After deploy, the node detail page's **Configuration** tab shows the active spec
 
 ## How edits flow
 
-1. You submit the form. The control plane validates against the executor's [capabilities](/en/executors/executor-capabilities) and the chain adapter's `configOverrideSchema`.
+1. You submit the form. The control plane validates against the executor's [capabilities](/docs/executors/executor-capabilities) and the chain adapter's `configOverrideSchema`.
 2. A new `Node.spec` revision is written.
 3. The executor sees the new revision on its next poll.
 4. Reconciler diffs and applies:
@@ -54,4 +54,4 @@ If you lower CPU, RAM, or disk below the per-network defaults from the chain ada
 
 ## Permissions
 
-**owner** and **admin**. Members see the form but can't submit. See [Roles and permissions](/en/platform/roles-and-permissions).
+**owner** and **admin**. Members see the form but can't submit. See [Roles and permissions](/docs/platform/roles-and-permissions).

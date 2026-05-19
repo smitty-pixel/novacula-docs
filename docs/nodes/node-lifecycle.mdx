@@ -21,7 +21,7 @@ Triggered from the node detail page via **Actions** → ... or from the row's ke
 Every action calls the `requestNodeLifecycleAction` mutation, which:
 
 1. Writes a new `Node.spec` revision with the requested `desiredState` (and an incremented `restartGeneration` for restart).
-2. Records a `node.lifecycle.requested` event in the [Events feed](/en/notifications/events-feed) attributed to the user who triggered it.
+2. Records a `node.lifecycle.requested` event in the [Events feed](/docs/notifications/events-feed) attributed to the user who triggered it.
 3. Returns immediately. Nothing has touched the executor yet.
 
 On its next polling tick (≤5s), the executor:
@@ -45,7 +45,7 @@ Re-starting the node resumes from where it left off — no resync from genesis.
 
 ## Restart semantics
 
-`Restart` is a clean stop + start. Use it after editing config (the [Edit configuration](/en/nodes/edit-configuration) flow already triggers this implicitly when needed) or to recover a process that's stuck without changing anything else.
+`Restart` is a clean stop + start. Use it after editing config (the [Edit configuration](/docs/nodes/edit-configuration) flow already triggers this implicitly when needed) or to recover a process that's stuck without changing anything else.
 
 ## Delete
 
@@ -81,4 +81,4 @@ Phases come from `getDerivedNodePhase()` in `@vos/protocol`, computed from desir
 
 ## Permissions
 
-Lifecycle actions and delete require **owner** or **admin**. Members can only read. See [Roles and permissions](/en/platform/roles-and-permissions).
+Lifecycle actions and delete require **owner** or **admin**. Members can only read. See [Roles and permissions](/docs/platform/roles-and-permissions).

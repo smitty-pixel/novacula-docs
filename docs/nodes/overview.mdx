@@ -17,7 +17,7 @@ A node maps to **one or more processes** depending on the chain:
 | Sui | `node` (`sui-node`) | 1 |
 | Tron | `node` (`java-tron`) | 1 |
 
-Logs and metrics surface per-process — see [Node logs](/en/nodes/logs) and [Node monitoring](/en/nodes/monitoring) — so you can stream the EL output independently of the CL output, even though they belong to the same node.
+Logs and metrics surface per-process — see [Node logs](/docs/nodes/logs) and [Node monitoring](/docs/nodes/monitoring) — so you can stream the EL output independently of the CL output, even though they belong to the same node.
 
 ## Anatomy of a node
 
@@ -44,26 +44,26 @@ The node detail page is the single source of truth for everything that's true ab
 
 | Want to | Page |
 | --- | --- |
-| Create a new node | [Deploy a node](/en/nodes/deploy-a-node) |
-| Start, stop, restart, delete | [Node lifecycle](/en/nodes/node-lifecycle) |
-| Change resources or config | [Edit node configuration](/en/nodes/edit-configuration) |
-| Move to a newer client version | [Upgrade a node](/en/nodes/upgrade-node) |
-| Filter / find a node in a long list | [Groups and tags](/en/nodes/groups-and-tags) |
-| Watch live process output | [Node logs](/en/nodes/logs) |
-| Read sync / peers / health metrics | [Node monitoring](/en/nodes/monitoring) |
+| Create a new node | [Deploy a node](/docs/nodes/deploy-a-node) |
+| Start, stop, restart, delete | [Node lifecycle](/docs/nodes/node-lifecycle) |
+| Change resources or config | [Edit node configuration](/docs/nodes/edit-configuration) |
+| Move to a newer client version | [Upgrade a node](/docs/nodes/upgrade-node) |
+| Filter / find a node in a long list | [Groups and tags](/docs/nodes/groups-and-tags) |
+| Watch live process output | [Node logs](/docs/nodes/logs) |
+| Read sync / peers / health metrics | [Node monitoring](/docs/nodes/monitoring) |
 
 ## Permissions
 
 - **Create / edit / lifecycle / delete:** owner, admin.
 - **Read (status, logs, metrics, events):** any org member.
 
-See [Roles and permissions](/en/platform/roles-and-permissions).
+See [Roles and permissions](/docs/platform/roles-and-permissions).
 
 ## How nodes appear on infrastructure
 
 The executor that owns the node is responsible for materializing it:
 
-- **[Agent](/en/executors/agent-bare-metal)** — one `systemd` service per process; data lives under `<data_dir>/nodes/<name>/`.
-- **[Operator](/en/executors/operator-kubernetes)** — one `BlockchainNode` CR → one `StatefulSet` (with one container per role) + a `ConfigMap` + a per-storage `PersistentVolumeClaim`.
+- **[Agent](/docs/executors/agent-bare-metal)** — one `systemd` service per process; data lives under `<data_dir>/nodes/<name>/`.
+- **[Operator](/docs/executors/operator-kubernetes)** — one `BlockchainNode` CR → one `StatefulSet` (with one container per role) + a `ConfigMap` + a per-storage `PersistentVolumeClaim`.
 
 You don't need to log into the host or `kubectl exec` to operate a node — every action is exposed in the UI. But if you need to debug something the platform isn't surfacing, both backends leave plain `journalctl` / `kubectl logs` output behind that you can read directly.

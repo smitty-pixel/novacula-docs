@@ -7,7 +7,7 @@ Connecting an executor takes two actions that have to happen in order: the contr
 
 ## Prerequisites
 
-- A role that can create API keys: **owner** or **admin**. See [Roles and permissions](/en/platform/roles-and-permissions).
+- A role that can create API keys: **owner** or **admin**. See [Roles and permissions](/docs/platform/roles-and-permissions).
 - One of:
   - A Linux host (Ubuntu 22.04+, Debian 12+) with `sudo` for the **Agent**.
   - A Kubernetes cluster (1.27+) with cluster-admin for the **Operator**.
@@ -22,7 +22,7 @@ Connecting an executor takes two actions that have to happen in order: the contr
     - **`agent`** — bare-metal daemon, manages nodes as `systemd` services.
     - **`operator`** — Kubernetes controller, manages nodes as `BlockchainNode` CRs.
 
-    Give the executor a name. The name is your label — it appears in the executors list, the events feed, and as a target in the [Deploy node wizard](/en/nodes/deploy-a-node). Names are unique per organization.
+    Give the executor a name. The name is your label — it appears in the executors list, the events feed, and as a target in the [Deploy node wizard](/docs/nodes/deploy-a-node). Names are unique per organization.
 
     Optionally pick a **release channel** (`stable`, `beta`). Channel controls which executor releases the control plane offers as upgrades.
   </Step>
@@ -39,15 +39,15 @@ Connecting an executor takes two actions that have to happen in order: the contr
   <Step title="Install on your infrastructure">
     Run the install command on the target machine.
 
-    - **Agent** — see [Provision on bare-metal](/en/infrastructure/provision-on-bare-metal) for the full TOML config and `systemd` setup.
-    - **Operator** — see [Provision on Kubernetes](/en/infrastructure/provision-on-kubernetes) for the Helm install and CRD bootstrap.
+    - **Agent** — see [Provision on bare-metal](/recipes/provision-on-bare-metal) for the full TOML config and `systemd` setup.
+    - **Operator** — see [Provision on Kubernetes](/recipes/provision-on-kubernetes) for the Helm install and CRD bootstrap.
 
     On first start, the executor:
 
     1. Reads the API key from local config.
     2. Calls `syncExecutor` against the control plane URL.
     3. The control plane creates the `Executor` row keyed by `(organizationId, name)`.
-    4. The executor declares its [capabilities](/en/executors/executor-capabilities) — chains, networks, clients, versions.
+    4. The executor declares its [capabilities](/docs/executors/executor-capabilities) — chains, networks, clients, versions.
   </Step>
   <Step title="Confirm online">
     Back in the UI, the executor row should flip to `online` within a few seconds (heartbeat is 5s; offline timeout is 30s). The capabilities list should populate with the chains the binary was built with.
@@ -64,7 +64,7 @@ Connecting an executor takes two actions that have to happen in order: the contr
 
 - An `ApiKey` row is created with the org id stored in metadata.
 - On first `syncExecutor`, an `Executor` row is created (if `(orgId, name)` is new) or upserted (if you're reconnecting an existing executor against a fresh key).
-- An `executor.connected` event is written to the [Events feed](/en/notifications/events-feed).
+- An `executor.connected` event is written to the [Events feed](/docs/notifications/events-feed).
 - An `ExecutorApiKeyUsage` row tracks which key was used, for the API-key list's "last used" column.
 
 ## Reconnecting an existing executor
@@ -73,6 +73,6 @@ If you've reinstalled or moved an executor and it comes back online with the sam
 
 ## Next steps
 
-- [Deploy a node](/en/nodes/deploy-a-node) onto your fresh executor.
-- [Roles and permissions](/en/platform/roles-and-permissions) — invite teammates with the right access level.
-- [Rotate executor API keys](/en/infrastructure/rotate-api-keys) — zero-downtime key rotation.
+- [Deploy a node](/docs/nodes/deploy-a-node) onto your fresh executor.
+- [Roles and permissions](/docs/platform/roles-and-permissions) — invite teammates with the right access level.
+- [Rotate executor API keys](/recipes/rotate-api-keys) — zero-downtime key rotation.

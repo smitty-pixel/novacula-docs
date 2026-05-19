@@ -7,9 +7,9 @@ Use the Deploy node wizard to provision a new validator node onto one of your co
 
 ## Prerequisites
 
-- A connected, healthy executor — see [Connect an executor](/en/executors/connect-an-executor).
-- The executor has declared **capabilities** for the chain, client, and version you want. If your chosen combination is missing, [upgrade the executor](/en/executors/upgrade-executor) first.
-- A role with deploy permission: **Org Owner** or **Org Admin**. See [Roles and permissions](/en/platform/roles-and-permissions).
+- A connected, healthy executor — see [Connect an executor](/docs/executors/connect-an-executor).
+- The executor has declared **capabilities** for the chain, client, and version you want. If your chosen combination is missing, [upgrade the executor](/docs/executors/upgrade-executor) first.
+- A role with deploy permission: **Org Owner** or **Org Admin**. See [Roles and permissions](/docs/platform/roles-and-permissions).
 
 ## Steps
 
@@ -18,7 +18,7 @@ Use the Deploy node wizard to provision a new validator node onto one of your co
     Open **Nodes** → **Deploy node** and pick, in order:
 
     - **Executor** — only executors with capabilities matching the next fields appear.
-    - **Chain** — Bitcoin, BSC, Ethereum, Sui, Tron. See [Supported chains](/en/chains/overview).
+    - **Chain** — Bitcoin, BSC, Ethereum, Sui, Tron. See [Supported chains](/docs/chains/overview).
     - **Network** — for example `mainnet`, `testnet`, `sepolia`, `signet`. Available networks depend on the chain.
     - **Node type** — `Full` everywhere; `Archive` on Ethereum and BSC only.
     - **Client + version** — for two-role chains (Ethereum), pick an EL client and a CL client independently.
@@ -43,7 +43,7 @@ Use the Deploy node wizard to provision a new validator node onto one of your co
 
     Ethereum CL clients also accept a **`checkpoint-sync-url`** as a first-class field, letting the CL fast-sync from a trusted checkpoint provider instead of from genesis.
 
-    See the per-chain page for the override matrix — for example [Bitcoin](/en/chains/bitcoin) or [Ethereum](/en/chains/ethereum).
+    See the per-chain page for the override matrix — for example [Bitcoin](/docs/chains/bitcoin) or [Ethereum](/docs/chains/ethereum).
   </Step>
   <Step title="Review and confirm">
     The review screen shows the final spec — every field you filled, plus all platform-managed values (ports, data-dir, init steps).
@@ -57,7 +57,7 @@ Use the Deploy node wizard to provision a new validator node onto one of your co
 The node detail page becomes the source of truth:
 
 - **Status** — populated from the executor's reporter loop, refreshed on each poll.
-- **Logs** — streamed live from each underlying process. See [Node logs](/en/nodes/logs).
-- **Monitoring** — sync progress, peers, and per-process metrics. See [Node monitoring](/en/nodes/monitoring).
+- **Logs** — streamed live from each underlying process. See [Node logs](/docs/nodes/logs).
+- **Monitoring** — sync progress, peers, and per-process metrics. See [Node monitoring](/docs/nodes/monitoring).
 
-To change anything after deploy — resources, config, or version — see [Edit node configuration](/en/nodes/edit-configuration) and [Upgrade a node](/en/nodes/upgrade-node).
+To change anything after deploy — resources, config, or version — see [Edit node configuration](/docs/nodes/edit-configuration) and [Upgrade a node](/docs/nodes/upgrade-node).

@@ -3,7 +3,7 @@ title: "Configuration reference"
 description: "Every configurable knob across the control plane, agent, and operator"
 ---
 
-This page is the canonical list of every configurable parameter for each Novacula component. For the env vars specifically, see [Environment variables](/en/reference/environment-variables) — that page is the authoritative env-var index.
+This page is the canonical list of every configurable parameter for each Novacula component. For the env vars specifically, see [Environment variables](/reference/environment-variables) — that page is the authoritative env-var index.
 
 ## Control plane
 
@@ -29,7 +29,7 @@ Optional with defaults:
 | `EVENT_RETENTION_DAYS` | `90` | Runtime events older than this are pruned |
 | `EVENT_RETENTION_MAX_PER_ORG` | `100000` | Hard cap on per-org runtime events; oldest pruned beyond this |
 
-See [Environment variables](/en/reference/environment-variables) for the same list with copy-pastable examples.
+See [Environment variables](/reference/environment-variables) for the same list with copy-pastable examples.
 
 ## Agent
 
@@ -118,10 +118,10 @@ Most users only set the first three (`URL`, `ACCESS_TOKEN`, `NAME`) directly and
 
 ## Per-node configuration
 
-Per-node config (resource requests, custom config-file overrides, CLI arg overrides, sidecars) is **not** in any of the configs above — it lives in the `NodeSpec` written by the control plane. See [Edit node configuration](/en/nodes/edit-configuration).
+Per-node config (resource requests, custom config-file overrides, CLI arg overrides, sidecars) is **not** in any of the configs above — it lives in the `NodeSpec` written by the control plane. See [Edit node configuration](/docs/nodes/edit-configuration).
 
 ## Related
 
-- [Environment variables](/en/reference/environment-variables) — env-var-only index.
-- [Agent CLI](/en/reference/agent-cli) — operator-side commands.
-- [GraphQL API](/en/reference/graphql-api) — programmatic API surface.
+- [Environment variables](/reference/environment-variables) — env-var-only index.
+- [Agent CLI](/reference/agent-cli) — operator-side commands.
+- [GraphQL API](/reference/graphql-api) — programmatic API surface.

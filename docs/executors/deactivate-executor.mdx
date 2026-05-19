@@ -24,7 +24,7 @@ What happens:
 - Hosted nodes remain in the control plane in their last reported state. They show as unreachable; lifecycle actions queue but won't apply until the executor reconnects.
 - Underlying processes on the infrastructure keep running — the agent / operator daemon doesn't stop just because it can't reach the control plane.
 
-To re-activate later, [rotate the API key](/en/infrastructure/rotate-api-keys) and walk the new key out to the host.
+To re-activate later, [rotate the API key](/recipes/rotate-api-keys) and walk the new key out to the host.
 
 ## Permanent removal: delete the executor row
 
@@ -37,14 +37,14 @@ You cannot delete an executor that has nodes. For each node:
 - If you want the data preserved, migrate the spec to a different executor (delete + redeploy on the new target).
 - If you don't, **stop** the node, then **delete** it.
 
-Both flows go through the [Node lifecycle](/en/nodes/node-lifecycle).
+Both flows go through the [Node lifecycle](/docs/nodes/node-lifecycle).
 
 ### Step 2 — delete the row
 
 From **Executors** → executor detail → **Delete**. The control plane:
 
 - Marks the row deleted (the API key tied to it is also disabled).
-- Writes an `executor.deleted` event to the [Events feed](/en/notifications/events-feed).
+- Writes an `executor.deleted` event to the [Events feed](/docs/notifications/events-feed).
 - Releases the `(organizationId, name)` slot — you can reuse the name for a new executor.
 
 ### Step 3 — clean up the host
@@ -60,7 +60,7 @@ sudo novacula-agent uninstall      # removes systemd units
 sudo rm -rf /var/lib/novacula      # removes config + binaries + node data
 ```
 
-Stop and remove the per-node `systemd` units the agent created — see [Agent CLI](/en/reference/agent-cli) for the unit naming convention.
+Stop and remove the per-node `systemd` units the agent created — see [Agent CLI](/reference/agent-cli) for the unit naming convention.
 
 #### Operator
 

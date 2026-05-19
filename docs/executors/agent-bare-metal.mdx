@@ -5,7 +5,7 @@ description: "The Novacula Agent — a daemon that manages node processes as sys
 
 The **Agent** is one of the two execution backends. It's a single standalone binary written in TypeScript and compiled to a self-contained executable with `bun build --compile`. It runs as a `systemd` service and manages every blockchain node process on the host as its own `systemd` service too.
 
-For the Operator (Kubernetes) backend, see [Operator (Kubernetes)](/en/executors/operator-kubernetes).
+For the Operator (Kubernetes) backend, see [Operator (Kubernetes)](/docs/executors/operator-kubernetes).
 
 ## When to use
 
@@ -33,7 +33,7 @@ The agent runs three independent loops on a single Bun process:
 | **Reconciler** | 5s | Diff `desired` vs `observed`. Generate config, install missing client binaries, write systemd units, start/stop services. |
 | **Reporter** | 10s | Probe each node process's metrics endpoint, build an `ObservedNodeState`, write it back via `syncExecutor`. |
 
-All three are tunable from the agent TOML — see [Configuration reference](/en/reference/configuration).
+All three are tunable from the agent TOML — see [Configuration reference](/reference/configuration).
 
 ## How it materializes a node
 
@@ -55,7 +55,7 @@ The agent installs itself as `novacula-agent.service` plus a one-shot rollback u
 - `Restart=on-failure`, `StartLimitBurst=3` over `StartLimitIntervalSec=120`.
 - `OnFailure=novacula-agent-rollback.service` — invoked if the agent flap-budget is exhausted. The rollback unit `mv`s the previous binary (kept as `<current>.prev` after every self-update) back over the broken one and restarts.
 
-This is what makes self-updates safe: if a new binary fails to start three times in two minutes, the rollback unit takes over without operator intervention. See [Apply executor upgrades](/en/infrastructure/apply-upgrades).
+This is what makes self-updates safe: if a new binary fails to start three times in two minutes, the rollback unit takes over without operator intervention. See [Apply executor upgrades](/recipes/apply-upgrades).
 
 ## Self-update
 
@@ -72,11 +72,11 @@ The new binary reports its version on the next sync; the control plane clears `p
 
 ## CLI
 
-The agent ships with a Citty-based CLI for install, lifecycle, status, and manual upgrade. See [Agent CLI](/en/reference/agent-cli) for the full subcommand list.
+The agent ships with a Citty-based CLI for install, lifecycle, status, and manual upgrade. See [Agent CLI](/reference/agent-cli) for the full subcommand list.
 
 ## See also
 
-- [Provision an executor on bare-metal](/en/infrastructure/provision-on-bare-metal) — install walkthrough.
-- [Configuration reference](/en/reference/configuration) — agent TOML schema.
-- [Environment variables](/en/reference/environment-variables) — env vars the agent reads.
-- [Connect an executor](/en/executors/connect-an-executor) — generate the API key the agent will use.
+- [Provision an executor on bare-metal](/recipes/provision-on-bare-metal) — install walkthrough.
+- [Configuration reference](/reference/configuration) — agent TOML schema.
+- [Environment variables](/reference/environment-variables) — env vars the agent reads.
+- [Connect an executor](/docs/executors/connect-an-executor) — generate the API key the agent will use.

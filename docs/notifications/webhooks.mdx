@@ -3,7 +3,7 @@ title: "Webhooks"
 description: "Push alert incidents to your own systems via outbound webhook"
 ---
 
-A **webhook** is the platform's outbound notification channel: when an [alert rule](/en/notifications/alert-rules) fires or resolves, the control plane POSTs a JSON payload to a URL you configure. Use it to hook Novacula into your incident management (PagerDuty, Opsgenie), chat (Slack via incoming webhooks), or your own internal alerting.
+A **webhook** is the platform's outbound notification channel: when an [alert rule](/docs/notifications/alert-rules) fires or resolves, the control plane POSTs a JSON payload to a URL you configure. Use it to hook Novacula into your incident management (PagerDuty, Opsgenie), chat (Slack via incoming webhooks), or your own internal alerting.
 
 There is exactly one webhook URL per organization today — multi-channel routing is on the roadmap.
 
@@ -79,4 +79,4 @@ The test delivery shows up in the deliveries page like any real one, marked `inc
 - **Configure URL + enable/disable + send test:** owner, admin.
 - **Read deliveries:** any org member.
 
-See [Roles and permissions](/en/platform/roles-and-permissions).
+See [Roles and permissions](/docs/platform/roles-and-permissions).

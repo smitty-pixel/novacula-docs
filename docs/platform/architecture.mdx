@@ -10,8 +10,8 @@ Novacula is built around three pieces: a SaaS **control plane**, one or more **e
 | Component | Where it runs | Responsibility |
 | --- | --- | --- |
 | Control plane | Novacula cloud | Stores desired-state specs, serves the UI and GraphQL API, holds executor capabilities |
-| Executor — [Agent](/en/executors/agent-bare-metal) | Your bare-metal hosts | Reconciles specs into `systemd` services |
-| Executor — [Operator](/en/executors/operator-kubernetes) | Your Kubernetes clusters | Reconciles specs into `ConfigMap` + `StatefulSet` |
+| Executor — [Agent](/docs/executors/agent-bare-metal) | Your bare-metal hosts | Reconciles specs into `systemd` services |
+| Executor — [Operator](/docs/executors/operator-kubernetes) | Your Kubernetes clusters | Reconciles specs into `ConfigMap` + `StatefulSet` |
 | Chain adapter | Inside each executor | Per-chain logic — config files, CLI args, ports, resource defaults, init steps |
 
 ## Connectivity
@@ -33,7 +33,7 @@ Every node has a spec with a monotonically increasing **revision**. The flow is:
 3. The executor's chain adapter translates the spec into concrete changes (start/stop a `systemd` unit, update a `StatefulSet`, rewrite a config file).
 4. The executor pushes back the revision it is now serving.
 
-If a node is seen at a revision older than the latest, the UI surfaces drift. See [Desired-state model](/en/platform/desired-state-model).
+If a node is seen at a revision older than the latest, the UI surfaces drift. See [Desired-state model](/docs/platform/desired-state-model).
 
 ## Two backends, one interface
 
@@ -46,4 +46,4 @@ The chain adapter is what guarantees that. It owns:
 - Per-network defaults for resources and ports.
 - Init steps (genesis download, JWT generation, archive checkpoint URLs, ...).
 
-See [Execution backends](/en/platform/execution-backends) for what each backend does differently, and [Chains and networks](/en/platform/chains-and-networks) for how chains, networks, roles, and clients are modeled.
+See [Execution backends](/docs/platform/execution-backends) for what each backend does differently, and [Chains and networks](/docs/platform/chains-and-networks) for how chains, networks, roles, and clients are modeled.

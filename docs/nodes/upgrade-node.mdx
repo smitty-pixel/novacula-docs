@@ -8,7 +8,7 @@ Upgrading a node means changing the **client version** of one or more of its pro
 ## Prerequisites
 
 - A role with deploy permission: **owner** or **admin**.
-- The target version must be in the executor's [capabilities](/en/executors/executor-capabilities) for this chain × client. If it's not, [upgrade the executor](/en/executors/upgrade-executor) first — newer executor releases ship newer client support.
+- The target version must be in the executor's [capabilities](/docs/executors/executor-capabilities) for this chain × client. If it's not, [upgrade the executor](/docs/executors/upgrade-executor) first — newer executor releases ship newer client support.
 - The target version must satisfy any **per-network constraints** the chain adapter declares (e.g. Hoodi requires `geth >=1.15.0`). The version picker hides versions that don't qualify.
 
 ## Steps
@@ -68,5 +68,5 @@ Every version change is recorded in:
 
 ## Related
 
-- [Upgrade an executor](/en/executors/upgrade-executor) — to add support for a newer client release.
-- [Edit node configuration](/en/nodes/edit-configuration) — for resource and config changes that aren't a version swap.
+- [Upgrade an executor](/docs/executors/upgrade-executor) — to add support for a newer client release.
+- [Edit node configuration](/docs/nodes/edit-configuration) — for resource and config changes that aren't a version swap.

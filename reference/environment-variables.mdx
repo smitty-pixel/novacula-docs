@@ -3,7 +3,7 @@ title: "Environment variables"
 description: "Every environment variable read by the control plane, agent, and operator at startup"
 ---
 
-The single source of truth for env-var configuration across all three components. For the broader configuration model (TOML for the agent, env-only for the others), see [Configuration reference](/en/reference/configuration).
+The single source of truth for env-var configuration across all three components. For the broader configuration model (TOML for the agent, env-only for the others), see [Configuration reference](/reference/configuration).
 
 ## Control plane
 
@@ -42,7 +42,7 @@ The agent's primary config source is its TOML file. Two env vars affect what fil
 | `NOVACULA_CONFIG` | Path to the agent TOML | Lower precedence than `--config` / `-c` flag |
 | `HOSTNAME` | Fallback for `[agent].name` | Used if neither config nor env sets it |
 
-The agent does not read other env vars at startup — everything else lives in the TOML. See [Configuration reference](/en/reference/configuration#agent) for the schema.
+The agent does not read other env vars at startup — everything else lives in the TOML. See [Configuration reference](/reference/configuration#agent) for the schema.
 
 ## Operator
 
@@ -75,4 +75,4 @@ The operator is configured **entirely through env vars**, set by the Helm chart.
 
 ## Related
 
-- [Configuration reference](/en/reference/configuration) — same data organized by component, with TOML / chart context.
+- [Configuration reference](/reference/configuration) — same data organized by component, with TOML / chart context.

@@ -9,13 +9,13 @@ Novacula supports five blockchains today, each implemented as a chain adapter in
 
 | Chain | Networks | Roles | Clients | Node types | Per-chain page |
 | --- | --- | --- | --- | --- | --- |
-| **Bitcoin** | `mainnet`, `test`, `signet` | `node` | `bitcoind` | Full | [Bitcoin](/en/chains/bitcoin) |
-| **BSC** | `mainnet`, `chapel` | `node` | `geth` (BSC fork) | Full, Archive | [BSC](/en/chains/bsc) |
-| **Ethereum** | `mainnet`, `sepolia`, `hoodi` | `el` + `cl` | EL: `geth`, `reth`, `nethermind`, `erigon`<br/>CL: `lighthouse`, `prysm`, `lodestar` | Full, Archive | [Ethereum](/en/chains/ethereum) |
-| **Sui** | `mainnet`, `testnet` | `node` | `sui-node` | Full | [Sui](/en/chains/sui) |
-| **Tron** | `mainnet`, `nile` | `node` | `java-tron` | Full | [Tron](/en/chains/tron) |
+| **Bitcoin** | `mainnet`, `test`, `signet` | `node` | `bitcoind` | Full | [Bitcoin](/docs/chains/bitcoin) |
+| **BSC** | `mainnet`, `chapel` | `node` | `geth` (BSC fork) | Full, Archive | [BSC](/docs/chains/bsc) |
+| **Ethereum** | `mainnet`, `sepolia`, `hoodi` | `el` + `cl` | EL: `geth`, `reth`, `nethermind`, `erigon`<br/>CL: `lighthouse`, `prysm`, `lodestar` | Full, Archive | [Ethereum](/docs/chains/ethereum) |
+| **Sui** | `mainnet`, `testnet` | `node` | `sui-node` | Full | [Sui](/docs/chains/sui) |
+| **Tron** | `mainnet`, `nile` | `node` | `java-tron` | Full | [Tron](/docs/chains/tron) |
 
-The exact set of versions a *given executor* can run is its [capabilities](/en/executors/executor-capabilities) blob, declared on every sync. The deploy wizard intersects this matrix with the target executor's capabilities.
+The exact set of versions a *given executor* can run is its [capabilities](/docs/executors/executor-capabilities) blob, declared on every sync. The deploy wizard intersects this matrix with the target executor's capabilities.
 
 ## Per-network defaults at a glance
 
@@ -45,7 +45,7 @@ All chains, regardless of client choice, share these conventions:
 - **Outbound from the executor.** No inbound ports need exposing for the platform; you may still want to expose RPC for your own use.
 - **Single data directory per node.** The chain adapter writes config + data under a single mount (Operator: one PVC; Agent: a subdirectory under `data_dir`).
 - **Init steps are codified.** Genesis blob downloads (Sui), JWT secret generation (Ethereum), snapshot fetches (Tron, optional), and checkpoint sync URLs (Ethereum CL) are all init-container or init-step logic owned by the adapter, not config you maintain.
-- **Override schema.** Every adapter declares `managedPaths` / `managedFlags` (rejected if you try to override) and `knownKeys` / `knownFlags` (typed, described, rendered with hints in the UI). See [Edit node configuration](/en/nodes/edit-configuration).
+- **Override schema.** Every adapter declares `managedPaths` / `managedFlags` (rejected if you try to override) and `knownKeys` / `knownFlags` (typed, described, rendered with hints in the UI). See [Edit node configuration](/docs/nodes/edit-configuration).
 
 ## Adding chain support
 

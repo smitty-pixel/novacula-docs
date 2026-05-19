@@ -45,7 +45,7 @@ System admin is independent of org membership. A system admin who is not a membe
 
 ## How the platform enforces it
 
-- **Authentication.** All sessions go through better-auth. UI sessions are cookie-based; executors authenticate with org-scoped API keys (see [API keys](/en/account/api-keys)).
+- **Authentication.** All sessions go through better-auth. UI sessions are cookie-based; executors authenticate with org-scoped API keys (see [API keys](/docs/account/api-keys)).
 - **Authorization.** A CASL ability is built per request from `(user.role, session.activeOrganizationId)`. Repos AND-merge `accessibleBy` filters into every Prisma query, so a query you're not allowed to run returns nothing instead of leaking rows.
 - **Tenant scope.** A non-system-admin user belongs to exactly one organization at a time. `activeOrganizationId` on the session is the single source of truth — set by login, lifted out of API key metadata for the polling client.
 
@@ -53,4 +53,4 @@ System admin is independent of org membership. A system admin who is not a membe
 
 Owners and admins invite members from **Members** → **Invite member**. The invitee gets an email; on accept, a `Member` row is created with the role chosen at invite time.
 
-See [Members and invitations](/en/account/members-and-invitations) for the full flow.
+See [Members and invitations](/docs/account/members-and-invitations) for the full flow.

@@ -19,8 +19,8 @@ There are two backends, both implementing the same `ChainAdapter` interface:
 
 | Backend | Runs on | How it materializes a node |
 | --- | --- | --- |
-| **[Agent](/en/executors/agent-bare-metal)** | A Linux host | As a set of `systemd` services |
-| **[Operator](/en/executors/operator-kubernetes)** | A Kubernetes cluster | As `ConfigMap` + `StatefulSet` |
+| **[Agent](/docs/executors/agent-bare-metal)** | A Linux host | As a set of `systemd` services |
+| **[Operator](/docs/executors/operator-kubernetes)** | A Kubernetes cluster | As `ConfigMap` + `StatefulSet` |
 
 When an executor connects, it declares its **capabilities** — the chains, clients, and versions it knows how to run. The Deploy node wizard only offers options the target executor can actually serve.
 
@@ -42,7 +42,7 @@ Novacula is **desired-state**, not imperative. You don't tell the executor "star
 
 Each node spec carries a monotonically increasing **revision**. The executor fetches the latest revision on every poll, applies it, and acknowledges it back. If a node is seen at a revision older than the latest, the UI surfaces drift.
 
-See [Desired-state model](/en/platform/desired-state-model) for the lifecycle in detail.
+See [Desired-state model](/docs/platform/desired-state-model) for the lifecycle in detail.
 
 <Tip>
 Coming from Kubernetes? The same way `kubectl apply` writes desired state and a controller converges to it — that's the relationship between the control plane and an executor.

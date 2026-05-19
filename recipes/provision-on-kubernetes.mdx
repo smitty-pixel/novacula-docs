@@ -5,7 +5,7 @@ description: "Install the Novacula Operator with Helm and connect it to your org
 
 This guide takes you from a fresh Kubernetes cluster to a registered, online Operator executor. End-state: a single `novacula-operator` `Deployment` is running, the CRD `blockchainnodes.validatoros.com` is registered, the control plane sees the executor as `online`, and you can deploy nodes from the UI.
 
-For the conceptual overview of what the Operator is, see [Operator (Kubernetes)](/en/executors/operator-kubernetes).
+For the conceptual overview of what the Operator is, see [Operator (Kubernetes)](/docs/executors/operator-kubernetes).
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ For the conceptual overview of what the Operator is, see [Operator (Kubernetes)]
 - **Cluster-admin** at install time (the operator auto-applies its CRD on first start).
 - **A storage class** suitable for blockchain workloads — typically a CSI provider with `WaitForFirstConsumer` binding, fast NVMe-backed for chains like Sui.
 - **Outbound HTTPS** from the operator pod to the control plane URL.
-- **An API key** of `kind = operator` — see [Connect an executor](/en/executors/connect-an-executor).
+- **An API key** of `kind = operator` — see [Connect an executor](/docs/executors/connect-an-executor).
 
 ## Steps
 
@@ -129,7 +129,7 @@ helm upgrade novacula-operator novacula/novacula-operator -n novacula-system -f 
 helm uninstall novacula-operator -n novacula-system
 ```
 
-The operator's own self-update is initiated from the UI — see [Upgrade an executor](/en/executors/upgrade-executor). You only run `helm upgrade` for chart-level changes (rbac, env vars, resource requests on the operator pod).
+The operator's own self-update is initiated from the UI — see [Upgrade an executor](/docs/executors/upgrade-executor). You only run `helm upgrade` for chart-level changes (rbac, env vars, resource requests on the operator pod).
 
 ## Hardening
 
@@ -140,6 +140,6 @@ The operator's own self-update is initiated from the UI — see [Upgrade an exec
 
 ## Next steps
 
-- [Deploy a node](/en/nodes/deploy-a-node) onto your fresh executor.
-- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — recovery if a self-update wedges the operator.
-- [Rotate executor API keys](/en/infrastructure/rotate-api-keys) — rotate the `Secret` value with no downtime.
+- [Deploy a node](/docs/nodes/deploy-a-node) onto your fresh executor.
+- [Apply executor upgrades](/recipes/apply-upgrades) — recovery if a self-update wedges the operator.
+- [Rotate executor API keys](/recipes/rotate-api-keys) — rotate the `Secret` value with no downtime.

@@ -9,7 +9,7 @@ Novacula is **declarative**. You don't tell an executor "start this process now"
 
 Every node has a single serialized **`NodeSpec`** stored on the `Node` row in the control plane. It is the complete declaration of what the executor must produce — chain, network, node type, client + version per role, container images, storage volumes, optional config overrides, sidecars, resource requests, and the desired lifecycle state (`running` or `stopped`).
 
-The control plane is the only writer. Mutations like [Deploy a node](/en/nodes/deploy-a-node), [Edit configuration](/en/nodes/edit-configuration), [Upgrade a node](/en/nodes/upgrade-node), and lifecycle actions all produce a new spec.
+The control plane is the only writer. Mutations like [Deploy a node](/docs/nodes/deploy-a-node), [Edit configuration](/docs/nodes/edit-configuration), [Upgrade a node](/docs/nodes/upgrade-node), and lifecycle actions all produce a new spec.
 
 ## Revision
 
@@ -23,7 +23,7 @@ Revisions are monotonically increasing per node. The executor never produces a r
 
 ## Reconcile loop
 
-The executor runs three concurrent loops (see [Agent (bare-metal)](/en/executors/agent-bare-metal) and [Operator (Kubernetes)](/en/executors/operator-kubernetes) for backend specifics):
+The executor runs three concurrent loops (see [Agent (bare-metal)](/docs/executors/agent-bare-metal) and [Operator (Kubernetes)](/docs/executors/operator-kubernetes) for backend specifics):
 
 | Loop | Default cadence | Job |
 | --- | --- | --- |
@@ -54,15 +54,15 @@ Two flavors of drift the platform raises automatically:
 - **Revision drift** — observed revision is older than desired. Usually transient: the executor will pick it up on the next poll.
 - **Liveness drift** — the executor hasn't called `syncExecutor` for longer than `HEARTBEAT_TIMEOUT_MS` (30s default). The executor's `status` virtual field flips to `offline`, and the node appears as unreachable until the executor reconnects.
 
-If `desiredState` is `running` but `observedStatus` is `stopped` or `error`, the **`node_down`** alert rule fires — see [Alert rules](/en/notifications/alert-rules).
+If `desiredState` is `running` but `observedStatus` is `stopped` or `error`, the **`node_down`** alert rule fires — see [Alert rules](/docs/notifications/alert-rules).
 
 ## Why declarative
 
 Three properties fall out of this design:
 
 1. **Crash-safe executors.** An executor can restart, lose memory, even reinstall — on the next poll it sees the latest spec and reconciles. There is no in-memory state to corrupt.
-2. **Outbound-only deployment.** The control plane never initiates anything; the executor pulls. See [Architecture](/en/platform/architecture).
-3. **Auditable history.** Every revision is a discrete write; the [Events feed](/en/notifications/events-feed) records who changed what and when.
+2. **Outbound-only deployment.** The control plane never initiates anything; the executor pulls. See [Architecture](/docs/platform/architecture).
+3. **Auditable history.** Every revision is a discrete write; the [Events feed](/docs/notifications/events-feed) records who changed what and when.
 
 <Tip>
 Coming from Kubernetes? The relationship is the same as `kubectl apply` (writes a desired spec) and a controller (converges to it). The executor is the controller; the `Node` row is the spec.

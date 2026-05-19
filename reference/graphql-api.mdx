@@ -33,7 +33,7 @@ Content-Type: application/json
 
 The `AuthGuard` validates the key, looks up its `organizationId` from key metadata, and sets `session.activeOrganizationId` to it. Every tenant-scoped query and mutation reads from there — you don't pass `organizationId` explicitly.
 
-API keys are managed at [API keys](/en/account/api-keys). Use a `purpose=executor` key for an executor; `purpose=personal` for human-driven scripts.
+API keys are managed at [API keys](/docs/account/api-keys). Use a `purpose=executor` key for an executor; `purpose=personal` for human-driven scripts.
 
 ## Authorization
 
@@ -117,7 +117,7 @@ The full error code list is in `UserErrorCode` in `@vos/protocol`.
 
 ## Versioning
 
-The schema is **not** versioned via URL or version field. Backwards-compatible additions (new fields, new queries) ship continuously; backwards-incompatible changes are rare and announced via [release notes](/en/release-notes).
+The schema is **not** versioned via URL or version field. Backwards-compatible additions (new fields, new queries) ship continuously; backwards-incompatible changes are rare and announced via [release notes](/release-notes/release-notes).
 
 ## Tools
 
@@ -126,5 +126,5 @@ The schema is **not** versioned via URL or version field. Backwards-compatible a
 
 ## Related
 
-- [API keys](/en/account/api-keys) — issue and rotate the credentials this API uses.
-- [Roles and permissions](/en/platform/roles-and-permissions) — what each role can do via this API.
+- [API keys](/docs/account/api-keys) — issue and rotate the credentials this API uses.
+- [Roles and permissions](/docs/platform/roles-and-permissions) — what each role can do via this API.

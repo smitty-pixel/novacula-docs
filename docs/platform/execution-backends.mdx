@@ -9,7 +9,7 @@ Both backends consume the same `ChainAdapter` interface and the same `NodeSpec` 
 
 ## Side by side
 
-| Aspect | [Agent](/en/executors/agent-bare-metal) | [Operator](/en/executors/operator-kubernetes) |
+| Aspect | [Agent](/docs/executors/agent-bare-metal) | [Operator](/docs/executors/operator-kubernetes) |
 | --- | --- | --- |
 | Runs on | A Linux host (Ubuntu 22.04+, Debian 12+) | A Kubernetes cluster (1.27+) |
 | Distribution | Standalone binary (compiled with `bun build --compile`) | Helm chart + auto-applied CRD |
@@ -55,4 +55,4 @@ This is why it's safe to think of a node as just *a row in the control plane*: t
 
 You can mix both under the same organization. A spec deployed against an Agent executor and a spec deployed against an Operator executor look identical in the UI; the executor list distinguishes them by the `kind` field.
 
-See [Connect an executor](/en/executors/connect-an-executor) for the bring-up flow that's common to both.
+See [Connect an executor](/docs/executors/connect-an-executor) for the bring-up flow that's common to both.

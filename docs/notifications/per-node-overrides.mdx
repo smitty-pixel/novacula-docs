@@ -3,7 +3,7 @@ title: "Per-node notification overrides"
 description: "Override the org-wide alert rules for individual nodes — silence noisy ones, tighten critical ones"
 ---
 
-By default, every node uses the org-wide [alert rule](/en/notifications/alert-rules) settings. Per-node overrides let you raise or lower that policy for individual nodes — typical reasons: silencing a canary that's allowed to flap, or tightening the disk threshold on a critical node where 85% is too late.
+By default, every node uses the org-wide [alert rule](/docs/notifications/alert-rules) settings. Per-node overrides let you raise or lower that policy for individual nodes — typical reasons: silencing a canary that's allowed to flap, or tightening the disk threshold on a critical node where 85% is too late.
 
 Overrides live on `NotificationNodeOverride` rows keyed by `(organizationId, nodeId)`. There is at most one override row per node.
 
@@ -40,8 +40,8 @@ Saving an override calls the same `saveNotificationSettings` mutation as the org
 - **Read** effective policy and override status — any org member.
 - **Edit** an override — owner, admin.
 
-See [Roles and permissions](/en/platform/roles-and-permissions).
+See [Roles and permissions](/docs/platform/roles-and-permissions).
 
 ## Audit trail
 
-Override changes are written to the [Events feed](/en/notifications/events-feed) and the audit log. The actor and the diff (org default → override value, or override removed) are captured for compliance.
+Override changes are written to the [Events feed](/docs/notifications/events-feed) and the audit log. The actor and the diff (org default → override value, or override removed) are captured for compliance.

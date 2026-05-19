@@ -5,7 +5,7 @@ description: "The Novacula Operator — a Kubernetes controller that materialize
 
 The **Operator** is one of the two execution backends. It runs as a single-replica `Deployment` inside your Kubernetes cluster, watches a custom resource called `BlockchainNode`, and renders each one into a `ConfigMap` (the node's config files) plus a `StatefulSet` (the node's pod template + persistent volume claims).
 
-For the bare-metal Agent, see [Agent (bare-metal)](/en/executors/agent-bare-metal).
+For the bare-metal Agent, see [Agent (bare-metal)](/docs/executors/agent-bare-metal).
 
 ## When to use
 
@@ -21,7 +21,7 @@ If you don't have a cluster ready, the Agent gets you running on a single Linux 
 - **Kubernetes** — 1.27 or newer.
 - **CRD permissions** — the operator auto-applies its CRD on startup, so the install user needs `customresourcedefinitions` write at least once. Subsequent upgrades only need namespace-scoped permissions.
 - **A namespace** — defaults to `novacula-system`. Override via `NOVACULA_OPERATOR_NAMESPACE`.
-- **A storage class** with `WaitForFirstConsumer` binding for the node PVCs; the operator probes available classes on startup and reports them in [executor capabilities](/en/executors/executor-capabilities).
+- **A storage class** with `WaitForFirstConsumer` binding for the node PVCs; the operator probes available classes on startup and reports them in [executor capabilities](/docs/executors/executor-capabilities).
 - **Outbound HTTPS** from the operator pod to the control plane URL.
 
 ## What the operator deploys
@@ -60,12 +60,12 @@ The chart deploys exactly one operator replica — Kubernetes lease-style coordi
 
 ## Bring-up flow
 
-1. Issue an `operator`-kind API key from the UI: see [Connect an executor](/en/executors/connect-an-executor).
+1. Issue an `operator`-kind API key from the UI: see [Connect an executor](/docs/executors/connect-an-executor).
 2. `helm install` the chart, passing `controlPlaneUrl` and the API key (typically as a `Secret`).
 3. The operator pod starts, applies the CRD, calls `syncExecutor`, declares its capabilities.
 4. The executor row in the UI flips to `online` within seconds.
 
-Walkthrough: [Provision an executor on Kubernetes](/en/infrastructure/provision-on-kubernetes).
+Walkthrough: [Provision an executor on Kubernetes](/recipes/provision-on-kubernetes).
 
 ## Inspect with kubectl
 
@@ -86,6 +86,6 @@ kubectl logs -l novacula.com/node=<name> -c <role>
 
 ## See also
 
-- [Provision an executor on Kubernetes](/en/infrastructure/provision-on-kubernetes) — Helm install walkthrough.
-- [Environment variables](/en/reference/environment-variables) — operator-side env vars.
-- [Apply executor upgrades](/en/infrastructure/apply-upgrades) — manual recovery if a self-update wedges.
+- [Provision an executor on Kubernetes](/recipes/provision-on-kubernetes) — Helm install walkthrough.
+- [Environment variables](/reference/environment-variables) — operator-side env vars.
+- [Apply executor upgrades](/recipes/apply-upgrades) — manual recovery if a self-update wedges.

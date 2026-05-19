@@ -61,5 +61,5 @@ If the upgrade went wrong but the executor is still alive, request a downgrade t
 
 If the upgrade left the executor wedged:
 
-- **Agent** — the systemd `OnFailure=` rollback should have already restored the previous binary. If not, see [Apply executor upgrades](/en/infrastructure/apply-upgrades) for manual recovery.
+- **Agent** — the systemd `OnFailure=` rollback should have already restored the previous binary. If not, see [Apply executor upgrades](/recipes/apply-upgrades) for manual recovery.
 - **Operator** — the self-update monitor should have rolled the image patch back. If not, edit the `Deployment`'s image manually and the operator will resume.

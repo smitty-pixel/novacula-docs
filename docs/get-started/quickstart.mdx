@@ -35,9 +35,9 @@ You do not need to expose any inbound ports. The executor connects outbound to t
     - **Agent** — a one-line installer that downloads the binary, writes a `systemd` unit, and starts the service.
     - **Operator** — a `helm install` command that deploys the controller and applies the CRD.
 
-    On first start, the executor authenticates with the API key, registers itself, and declares its **capabilities** — the chains, clients, and versions it can run. See [Executor capabilities](/en/executors/executor-capabilities).
+    On first start, the executor authenticates with the API key, registers itself, and declares its **capabilities** — the chains, clients, and versions it can run. See [Executor capabilities](/docs/executors/executor-capabilities).
 
-    For backend-specific setup details, see [Provision on Kubernetes](/en/infrastructure/provision-on-kubernetes) or [Provision on bare-metal](/en/infrastructure/provision-on-bare-metal).
+    For backend-specific setup details, see [Provision on Kubernetes](/recipes/provision-on-kubernetes) or [Provision on bare-metal](/recipes/provision-on-bare-metal).
   </Step>
   <Step title="Deploy a node">
     Open **Nodes** → **Deploy node**. Fill out the wizard:
@@ -55,6 +55,6 @@ You do not need to expose any inbound ports. The executor connects outbound to t
 
 ## Next steps
 
-- [Key concepts](/en/get-started/key-concepts) — the mental model behind executors, nodes, and desired state.
-- [Deploy a node](/en/nodes/deploy-a-node) — every wizard field explained.
-- [Roles and permissions](/en/platform/roles-and-permissions) — invite teammates with the right access level.
+- [Key concepts](/docs/get-started/key-concepts) — the mental model behind executors, nodes, and desired state.
+- [Deploy a node](/docs/nodes/deploy-a-node) — every wizard field explained.
+- [Roles and permissions](/docs/platform/roles-and-permissions) — invite teammates with the right access level.

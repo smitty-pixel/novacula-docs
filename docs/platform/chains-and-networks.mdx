@@ -9,7 +9,7 @@ Five concepts model every blockchain Novacula supports. Each one narrows the nex
 
 The top-level identifier — `bitcoin`, `bsc`, `ethereum`, `sui`, `tron` today. A chain is a single chain adapter inside the executor. Adding chain support is a code change in `@vos/adapter`; the adapter declares everything else on this page.
 
-See [Supported chains](/en/chains/overview) for the matrix of what's available right now.
+See [Supported chains](/docs/chains/overview) for the matrix of what's available right now.
 
 ## Network
 
@@ -21,7 +21,7 @@ The network list is closed: only networks the adapter knows about are eligible. 
 
 The slot a process fills inside a node. Most chains are single-role with `node` (Bitcoin, BSC, Sui, Tron). Ethereum is two-role: `el` (execution layer) plus `cl` (consensus layer), connected over the JWT-authenticated Engine API.
 
-Roles matter because each role gets its own client choice, version, and override surface. They also drive log scoping — see [Node logs](/en/nodes/logs) — so you can stream EL logs and CL logs independently.
+Roles matter because each role gets its own client choice, version, and override surface. They also drive log scoping — see [Node logs](/docs/nodes/logs) — so you can stream EL logs and CL logs independently.
 
 ## Client
 
@@ -72,8 +72,8 @@ The chain adapter then expands that into:
 
 The set of `chain × network × role × client × version × nodeType` that a *specific* executor knows how to run is its **capabilities** payload, declared on every `syncExecutor` heartbeat. The Deploy node wizard intersects the global catalog with the executor's capabilities, so you can never deploy something the target can't actually serve.
 
-See [Executor capabilities](/en/executors/executor-capabilities).
+See [Executor capabilities](/docs/executors/executor-capabilities).
 
 ## Per-chain pages
 
-For port numbers, default storage sizes, override matrices, and notes on each supported chain, see [Supported chains overview](/en/chains/overview) and the per-chain pages: [Bitcoin](/en/chains/bitcoin), [BSC](/en/chains/bsc), [Ethereum](/en/chains/ethereum), [Sui](/en/chains/sui), [Tron](/en/chains/tron).
+For port numbers, default storage sizes, override matrices, and notes on each supported chain, see [Supported chains overview](/docs/chains/overview) and the per-chain pages: [Bitcoin](/docs/chains/bitcoin), [BSC](/docs/chains/bsc), [Ethereum](/docs/chains/ethereum), [Sui](/docs/chains/sui), [Tron](/docs/chains/tron).

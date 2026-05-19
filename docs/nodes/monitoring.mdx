@@ -17,7 +17,7 @@ The control plane stores the most recent observation on the `Node` row's `observ
 
 ## Status badge
 
-The colored badge at the top of the detail page is a **derived phase** computed from desired state, observed status across all processes, and revision drift. See [Node lifecycle](/en/nodes/node-lifecycle#state-machine) for the phase set.
+The colored badge at the top of the detail page is a **derived phase** computed from desired state, observed status across all processes, and revision drift. See [Node lifecycle](/docs/nodes/node-lifecycle#state-machine) for the phase set.
 
 ## Sync progress
 
@@ -39,7 +39,7 @@ Per-process peer counts. Useful for diagnosing network isolation: a process at z
 
 ## Disk usage
 
-The executor's resource snapshot includes total + available bytes for the disk(s) backing this node. The UI shows used percentage and total size, plus a warning band when usage exceeds the **disk_usage** alert threshold (default 85% — see [Alert rules](/en/notifications/alert-rules)).
+The executor's resource snapshot includes total + available bytes for the disk(s) backing this node. The UI shows used percentage and total size, plus a warning band when usage exceeds the **disk_usage** alert threshold (default 85% — see [Alert rules](/docs/notifications/alert-rules)).
 
 ## CPU and memory
 
@@ -75,9 +75,9 @@ These render as additional tiles in the metrics grid and are also pushed into th
 ## What's not here
 
 - **Historical metrics.** The control plane stores only the latest observation per node; there is no time-series history. For a Grafana-style dashboard over time, scrape the underlying client metrics endpoints directly with your own Prometheus and feed your own dashboards.
-- **Log-based metrics.** Anything you'd extract from log lines is in the [Logs tab](/en/nodes/logs), not here.
+- **Log-based metrics.** Anything you'd extract from log lines is in the [Logs tab](/docs/nodes/logs), not here.
 
 ## Related
 
-- [Alert rules](/en/notifications/alert-rules) — turn metrics into outbound notifications.
-- [Per-node notification overrides](/en/notifications/per-node-overrides) — tune thresholds per node.
+- [Alert rules](/docs/notifications/alert-rules) — turn metrics into outbound notifications.
+- [Per-node notification overrides](/docs/notifications/per-node-overrides) — tune thresholds per node.
