@@ -1,0 +1,61 @@
+---
+title: "AI Assistant"
+description: "In-product chat helper — open the panel, send a message, manage threads"
+---
+
+The **AI Assistant** is an in-product chat panel that lives in the bottom bar of the Dashboard UI. Use it to ask questions about your fleet, draft config changes, walk through a flow you don't remember, or get pointed at the right docs page.
+
+The assistant is available to every signed-in org role — Org Owner, Org Admin, Org Member. It is **not** rendered in the Admin Panel.
+
+## Open the chat panel
+
+A sparkles-icon launcher sits in the bottom bar on every Dashboard route. Clicking it docks a chat panel above the launcher (~360 × 620 px). A maximise toggle in the panel header expands it to a full-height side panel; the X closes the panel back to the launcher without ending the active thread.
+
+The panel is lazy-loaded — the bundle ships only after the first open, so the launcher itself has near-zero cost on initial page load.
+
+## Send a message
+
+Type into the prompt input at the bottom of the panel and press Enter or the send button. Responses stream in token-by-token as the assistant composes them.
+
+A blank thread shows **quick prompts** as chips — single-click starters tuned to the part of the product you're on. They either seed the prompt input (so you can tweak before sending) or kick off an action directly.
+
+### Tool calls and confirmations
+
+The assistant can propose state-changing actions on your behalf — apply a draft config patch, run a lifecycle action, mutate a setting. **Every such action is gated by an explicit confirmation step in the panel** before it runs. You see exactly what's about to change, with a clear approve / decline choice.
+
+The assistant cannot perform writes silently. If the panel doesn't ask you to confirm, the action is read-only.
+
+## Switch and delete threads
+
+A history popover (clock icon) lists every thread you've started, newest first. From there you can:
+
+- **Start a fresh thread** with the plus button — the previous thread is preserved, not deleted.
+- **Switch** to an older thread by clicking it. Messages load back into the panel and the input continues the conversation in that context.
+- **Delete** a thread with the per-row trash button. Confirmation step; if you delete the currently-active thread, the panel resets to an empty conversation.
+
+The active thread id is remembered across navigation and across page reloads, so re-opening the panel returns you to the last conversation you had.
+
+## What the assistant can do
+
+- Answer questions about your fleet using read-only access to your org's resources (executors, nodes, events, audit log).
+- Walk you through a flow you don't remember — *"how do I rotate an executor API key?"* — and link out to the corresponding docs page.
+- Propose configuration changes for review (the confirmation gate above always applies).
+- Reference [sources](/docs/audit/audit-log) inline when it draws from a specific event, audit row, or doc.
+
+## What the assistant won't do
+
+- Take state-changing actions without an explicit confirmation in the panel.
+- Operate from the **Admin Panel** — it is Dashboard-UI only.
+- Persist state outside of threads — each conversation is scoped to its thread.
+- Replace direct UI actions for routine tasks. For one-off mutations the wizard / form is faster.
+
+## Privacy and data handling
+
+Threads are stored server-side scoped to your user; threads are private and not visible to other members of your organization. Deleting a thread removes it from the server.
+
+The model receives only the information needed to answer — typically the message stream plus tool-resolved context from the active org. For confirmation-gated actions, the precise mutation payload is shown in the panel before you approve.
+
+## Permissions
+
+- **Open the panel and chat** — Org Owner, Org Admin, Org Member.
+- **Approve a state-changing action** — your role must already grant the underlying operation. The assistant cannot escalate permissions; an action you couldn't perform yourself is also one the assistant can't perform for you.

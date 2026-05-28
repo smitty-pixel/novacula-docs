@@ -1,0 +1,67 @@
+---
+title: "Ink"
+description: "Two-role (op-geth + op-node) OP-Stack L2 anchored on Ethereum"
+---
+
+Ink is an OP-Stack L2 anchored on Ethereum. Every Ink node is two processes: an **op-geth** execution layer and an **op-node** rollup client. They talk over the Engine API on `127.0.0.1:8551`, JWT-secured. The chain adapter bakes in network-specific sequencer URLs, L1 reference RPC endpoints, and op-node P2P bootnodes so the node can sync without external configuration.
+
+## Networks and resources
+
+| Network | Sequencer RPC | L1 reference RPC |
+| --- | --- | --- |
+| `ink-mainnet` | `https://rpc-gel.inkonchain.com` | same |
+| `ink-sepolia` | `https://rpc-gel-sepolia.inkonchain.com` | same |
+
+Per-network resource defaults are pre-filled by the deploy wizard.
+
+## Clients
+
+| Role | Client | Versions |
+| --- | --- | --- |
+| `el` | **op-geth** | `v1.101503.4` |
+| `rollup` | **op-node** | `v1.13.2` |
+
+A single pinned client per role today — adding alternative implementations (e.g. op-reth) is a future addition.
+
+## Ports
+
+| Name | Port | Owner | Notes |
+| --- | --- | --- | --- |
+| EL RPC (HTTP) | `8545` | op-geth | |
+| EL RPC (WebSocket) | `8546` | op-geth | |
+| EL P2P | `39393` | op-geth | |
+| EL metrics | `6060` | op-geth | |
+| Engine API | `8551` | op-geth ↔ op-node | JWT-secured, pod-internal |
+| Rollup RPC | `9545` | op-node | |
+| Rollup P2P | `9003` | op-node | |
+| Rollup metrics | `7300` | op-node | |
+
+EL and rollup P2P need outbound reachability to peer with the OP-Stack network. Bind addresses, the Engine API endpoint, and the JWT path are platform-managed.
+
+## Init steps
+
+1. **JWT secret** — shared between op-geth (AuthRPC) and op-node (Engine API). Fixed pod-internal value, same pattern as Ethereum / Igra.
+2. **op-node P2P bootnodes + static peer** — network-defaults baked into the adapter. If you're running an isolated test mesh, override these via CLI args.
+
+## Config overrides
+
+Ink uses **CLI argument overrides** per role; there are no config-file overrides.
+
+- **`op-geth`** — managed-flag allow-list for the EL role; user args validated per-flag.
+- **`op-node`** — managed-flag allow-list (`OP_NODE_KNOWN_FLAGS`); user args validated per-flag.
+
+For the full managed + known flag lists, see `packages/adapter/src/ink/index.ts` in the codebase. Anything off the managed list and off the known list is passed through verbatim.
+
+## Sync
+
+op-node fetches batches from L1 (via the configured L1 reference RPC) and op-geth processes them through the Engine API. There is no checkpoint-sync URL or snapshot-restore knob exposed by the platform — initial sync is from genesis via the L1-derived chain.
+
+## Metrics
+
+Both processes are scraped on each reporter tick. Common per-node fields (status, height, peers, syncProgress, disk) come from op-node + op-geth combined. Chain-specific extras include op-node rollup metrics and op-geth process / chain counters. See [Node monitoring](/docs/nodes/monitoring).
+
+## Common patterns
+
+- **RPC provider for the Ink mainnet** — accept defaults; expose `:8545` (HTTP) and `:8546` (WS) through your own reverse proxy.
+- **Ink Sepolia sandbox** — useful for dApp integration testing against a live OP-Stack chain without spending mainnet gas.
+- **Local L1 reference RPC** — if you're running your own Ethereum mainnet node via Novacula, point op-node at its `:8545` instead of the public default. Saves on egress and de-risks L1-side rate limits.

@@ -28,6 +28,9 @@ Each chain adapter declares a `syncProgress` metric (when the underlying client 
 | Bitcoin | `bitcoind` JSON-RPC `getblockchaininfo.verificationprogress` |
 | BSC / Ethereum EL | client `eth_syncing` + metrics endpoint |
 | Ethereum CL | beacon `/eth/v1/node/syncing` |
+| Igra | `postScrape` against the public Igra explorer's `eth_blockNumber` (the L2 has no native p2p tip) |
+| Ink | op-node + op-geth metrics |
+| Monad | monad-execution + monad-rpc exporters via the local OTEL collector |
 | Sui | `sui-node` Prometheus exporter |
 | Tron | `java-tron` Prometheus exporter |
 
@@ -63,14 +66,20 @@ Two layers:
 
 ## Per-chain extras
 
-Chains expose chain-specific metrics through the adapter's `metricsMapping.extras` map. Examples:
+Chains expose chain-specific metrics through the adapter's `metricsMapping.extras` map. The set differs per chain and per client choice within a chain:
 
-- **Bitcoin** — mempool transaction count.
-- **Ethereum CL** — current epoch, finalized epoch, head slot.
-- **Sui** — current checkpoint, current epoch.
-- **Tron** — solidified block height.
+| Chain | Extras (sample) |
+| --- | --- |
+| **Bitcoin** | `difficulty`, `hash_rate`, `mempool_bytes`, `mempool_usage_bytes`, `uptime_seconds` |
+| **BSC** | Go-ethereum process / chain / txpool counters |
+| **Ethereum** | CL client extras (beacon-chain / fork-choice / engine-API gauges) + EL client extras (p2p + chain counters) |
+| **Sui** | None today — the adapter passes only `height` / `peers` / `syncProgress*` |
+| **Tron** | `java-tron` JVM + chain counters |
+| **Igra** | EL extras + kaspad sidecar metrics (`kaspad_is_synced`, `kaspad_virtual_daa_score`, `kaspad_block_count`, `kaspad_header_count`, `kaspad_server_version`) |
+| **Ink** | op-node rollup metrics + op-geth metrics |
+| **Monad** | 18 extras — `consensus_committed_blocks`, `consensus_local_timeouts`, `raptorcast_messages_received`, `raptorcast_recv_errors`, `blocksync_request_timeout`, `wireauth_transport_sessions`, `execution_ledger_*`, `statesync_*`, `rpcActiveRequests`, ... |
 
-These render as additional tiles in the metrics grid and are also pushed into the alert pipeline.
+Extras are stored on `Node.observed.details` but **not rendered by any built-in UI tile today** — they are available via the GraphQL API for ad-hoc inspection and for future per-chain dashboards. The same Prometheus metric can be a common per-node field on one chain and an extra on another; what matters is whether the adapter wired it to the typed `metricsMapping` or to the `extras` bag.
 
 ## What's not here
 

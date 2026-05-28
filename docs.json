@@ -87,8 +87,23 @@
                   "docs/chains/bitcoin",
                   "docs/chains/bsc",
                   "docs/chains/ethereum",
+                  "docs/chains/igra",
+                  "docs/chains/ink",
+                  "docs/chains/monad",
                   "docs/chains/sui",
                   "docs/chains/tron"
+                ]
+              },
+              {
+                "group": "Audit",
+                "pages": [
+                  "docs/audit/audit-log"
+                ]
+              },
+              {
+                "group": "AI Assistant",
+                "pages": [
+                  "docs/ai-assistant/overview"
                 ]
               }
             ]

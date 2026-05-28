@@ -60,13 +60,21 @@ Visible at **Settings** → **Notifications** → **Webhook deliveries**. Up to 
 
 ## Test webhook
 
-The **Test** button calls the `testNotificationWebhook` mutation, which constructs a synthetic incident payload and fires one delivery against the saved URL. Use this to:
+The **Test** button calls the `testNotificationWebhook` mutation, which fires a single connectivity-check delivery against the saved URL. The payload is **not** an incident-shaped JSON — it's a minimal probe:
 
-- Confirm the URL is reachable.
-- Validate your receiver parses the schema correctly.
-- Smoke-test signature handling (when added — not currently used).
+```jsonc
+{
+  "sentAt": "2026-05-28T13:42:00.000Z",
+  "message": "Validator OS webhook test"
+}
+```
 
-The test delivery shows up in the deliveries page like any real one, marked `incidentId = null`.
+Use it to:
+
+- Confirm the URL is reachable from the control plane's egress.
+- Smoke-test transport (TLS, auth header, IP allowlist).
+
+The test delivery shows up in the deliveries page like any real one, marked `incidentId = null`. For validating that your receiver parses the **real** incident schema (the one shown under [Payload](#payload) above), wait for a real incident or trigger one in a staging org.
 
 ## Adapting to common targets
 

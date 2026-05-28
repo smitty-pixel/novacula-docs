@@ -30,18 +30,14 @@ When you select a different org from the org switcher, better-auth updates `acti
 
 Logout deletes the current session row and clears the cookie. Other devices stay logged in until you revoke them or they expire on their own.
 
-## Password reset
+## If you lost your password
 
-If you've lost your password:
+There is no self-service password reset today — email-driven flows are blocked on email transport landing in the platform. Two paths exist instead:
 
-1. From the login screen, click **Forgot password**.
-2. Enter the email tied to your account. A reset link is emailed (the email always confirms send, regardless of whether the address is registered, to avoid leaking account existence).
-3. Open the link and set a new password.
+- **Ask an admin in your organization.** Owners and admins can reset a member's password from the **Members** page (see [Members and invitations](/docs/account/members-and-invitations)). The reset path also revokes the user's existing sessions in the same step, so the next sign-in is on a fresh credential.
+- **Change while signed in.** If you do remember your current password, use **Change password** from **Account** instead — it doesn't require email and revokes other sessions as a side effect.
 
-A successful reset:
-
-- Updates the password hash on your `Account` row.
-- Does **not** auto-revoke existing sessions. If you suspect compromise, revoke all sessions from the panel after logging in.
+Self-service **Forgot password** from the sign-in page is on the roadmap and ships together with the email transport.
 
 ## When a system admin impersonates you
 

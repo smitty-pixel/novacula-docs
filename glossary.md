@@ -22,6 +22,10 @@ Canonical terminology for the Novacula docs. Use these terms consistently; don't
 | organization | Tenant boundary in the platform (better-auth concept); everything is scoped to one |
 | API key | Org-scoped credential an executor or external script presents to authenticate with the control plane |
 | session | Browser/IDE login session tied to a user and an active organization |
+| audit log | Append-only who-did-what record carrying actor + typed action + target — see `/docs/audit/audit-log` |
+| events feed | Resource-lifecycle stream from control plane + executors; events do not require an actor — see `/docs/notifications/events-feed` |
+| incident | Lifecycle-tracked alert (status `open` → `resolved`) opened by an alert rule and optionally delivered via webhook |
+| assistant thread | A persisted conversation in the AI Assistant chat panel; the active thread id is restored across navigation |
 
 ## Don't use these terms for Novacula
 
