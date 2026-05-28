@@ -20,10 +20,15 @@ You do not need to expose any inbound ports. The executor connects outbound to t
 
 <Steps>
   <Step title="Create an account">
-    Sign up at the Novacula console. A personal organization is created for you on completion of sign-up, and you become its **Org Owner**.
+    Sign up at the Novacula console. A personal organization is created for you on completion of sign-up, and you become its **Owner**.
   </Step>
   <Step title="Generate an executor API key">
-    From the organization sidebar, open **Executors** → **Connect new executor**. Pick `agent` or `operator`, give the executor a name, and copy the displayed API key.
+    From the organization sidebar, open **Executors** → **Connect new executor**. Pick the backend that matches the host you'll install on:
+
+    - **`agent`** — for **bare-metal** or VM targets. The Agent runs as a `systemd` service on a Linux host.
+    - **`operator`** — for **Kubernetes** targets. The Operator runs as a controller inside the cluster and reconciles nodes via CRDs.
+
+    Give the executor a name and copy the displayed API key.
 
     <Warning>
     The API key is shown **only once**. Store it somewhere you can reference during install — a password manager, a secret store, or your provisioning system.
@@ -45,6 +50,7 @@ You do not need to expose any inbound ports. The executor connects outbound to t
     - **Target** — pick the executor you just connected, then a chain, network, client, and version.
     - **Resources** — accept the per-network defaults, or override CPU / RAM / disk.
     - **Custom config** — leave empty for the first run; you can add overrides later.
+    - **Review** — the **Advanced** section lets you pick how RPC ports are published. On the Operator backend, **Service type** (`ClusterIP` / `NodePort` / `LoadBalancer`) controls whether the endpoint is reachable only inside the cluster or also externally. See [Deploy a node — Review](/docs/nodes/deploy-a-node) for the full breakdown.
 
     Confirm the review screen. The executor picks up the spec on its next poll (typically within seconds).
   </Step>

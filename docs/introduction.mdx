@@ -3,24 +3,51 @@ title: "Introduction"
 description: "B2B platform for running blockchain full nodes for RPC, across bare-metal and Kubernetes"
 ---
 
-Welcome to Novacula — the blockchain node infrastructure platform for running your own full nodes for RPC. Deploy, configure, monitor, and operate JSON-RPC, WebSocket, and gRPC endpoints on bare-metal or Kubernetes you control — no third-party gateway, no traffic leaving your network.
+Novacula is the blockchain node infrastructure platform for running your own full nodes for RPC. Deploy, configure, monitor, and operate JSON-RPC, WebSocket, and gRPC endpoints on bare-metal or Kubernetes you control — no third-party gateway, no traffic leaving your network.
 
 **On-premise from day one, in every deployment mode.** Managed **Cloud** keeps the control plane on Novacula's side while the node hardware remains yours; fully [Self-hosted](/self-hosted/introduction) puts the entire stack inside your network. Either way, blockchain processes and their data never leave hardware you own. The control plane orchestrates; your servers serve.
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Quickstart" icon="rocket" href="/docs/get-started/quickstart">
-    Sign up, connect an executor, and deploy your first node in under 10 minutes.
+    From zero to a syncing node in under 10 minutes.
   </Card>
   <Card title="Key concepts" icon="book" href="/docs/get-started/key-concepts">
-    The mental model — control plane, executors, nodes, processes, desired state.
+    The mental model in five terms.
   </Card>
   <Card title="Architecture" icon="diagram-project" href="/docs/platform/architecture">
-    How the control plane and executors fit together.
+    How the control plane, executors, and adapters fit together.
   </Card>
   <Card title="Supported chains" icon="link" href="/docs/chains/overview">
-    Bitcoin, BSC, Ethereum, Igra, Ink, Monad, Sui, Tron — networks, clients, versions.
+    Bitcoin, BSC, Ethereum, Igra, Ink, Monad, Sui, Tron.
+  </Card>
+  <Card title="Recipes" icon="book" href="/recipes/provision-on-kubernetes">
+    Provisioning playbooks for K8s and bare-metal.
+  </Card>
+  <Card title="Self-hosted" icon="warehouse" href="/self-hosted/introduction">
+    Run the entire stack inside your network.
   </Card>
 </CardGroup>
+
+## How it fits together
+
+```mermaid
+flowchart LR
+    subgraph cloud[Novacula Cloud]
+        CP["Control plane<br/>UI · GraphQL · desired-state store"]
+    end
+    subgraph yours[Your infrastructure]
+        AG["Agent<br/>(bare-metal · systemd)"]
+        OP["Operator<br/>(Kubernetes · CRD)"]
+        AG --> N1[Node processes]
+        OP --> N2[Node processes]
+    end
+    AG -. outbound HTTPS .-> CP
+    OP -. outbound HTTPS .-> CP
+    CP -. spec revisions .-> AG
+    CP -. spec revisions .-> OP
+```
+
+Executors run on your side. They open outbound HTTPS to the control plane, fetch the latest spec revisions for the nodes they own, and reconcile the underlying processes — never the other way around. See [Architecture](/docs/platform/architecture) for the full lifecycle.
 
 ## Two execution backends
 
@@ -36,5 +63,5 @@ Pick the one that matches your infrastructure — or run both side-by-side under
 Executors always initiate connections to the control plane over HTTPS. The control plane never reaches into your infrastructure, so you don't need to expose any inbound ports, open firewall rules, or run VPN tunnels.
 
 <Info>
-Need a programmatic interface for the platform? See [GraphQL API](/reference/graphql-api).
+Need a programmatic interface for the platform? Authenticate with an [API key](/docs/account/api-keys) — every UI action has a GraphQL counterpart.
 </Info>

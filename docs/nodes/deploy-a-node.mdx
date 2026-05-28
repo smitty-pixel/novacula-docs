@@ -48,6 +48,15 @@ Use the Deploy node wizard to provision a new blockchain full node onto one of y
   <Step title="Review and confirm">
     The review screen shows the final spec — every field you filled, plus all platform-managed values (ports, data-dir, init steps).
 
+    An **Advanced** section exposes a few last-mile knobs the wizard pre-fills with safe defaults:
+
+    - **Service type** *(Operator only)* — how the node's RPC ports are published on the cluster:
+      - `ClusterIP (internal only)` *(default)* — port reachable only from inside the cluster; expose externally through your own Ingress / gateway.
+      - `NodePort` — Kubernetes opens a port on every node IP that forwards to the pod. Simple for self-hosted clusters.
+      - `LoadBalancer` — Kubernetes provisions a cloud load balancer with a public IP. Costs money on managed clouds; only use when you actually want a public endpoint.
+    - **Restart policy** *(Agent only)* — `systemd` restart behaviour for the underlying processes (e.g. `always`, `on-failure`).
+    - **Node ID** — leave blank to auto-generate from chain + network + executor; supply a value if you want a specific id.
+
     Confirm. The wizard creates the node at revision 1; the target executor picks it up on its next poll (typically within seconds) and starts reconciling.
   </Step>
 </Steps>
