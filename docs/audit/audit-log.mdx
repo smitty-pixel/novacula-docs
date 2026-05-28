@@ -1,0 +1,96 @@
+---
+title: "Audit log"
+description: "Who-did-what record across an organization — immutable, filterable, exportable"
+---
+
+The **Audit log** is a strict who-did-what record for every action that happens inside an organization through the Dashboard UI or the platform's APIs. Each row carries an **actor**, a **target**, a **typed action**, a timestamp, and a sanitized details payload. Use it for compliance reviews, incident forensics, and *"who changed this setting?"* investigations.
+
+The page lives at **Audit log** in the sidebar of the Dashboard UI. A self-scoped slice of the same data is embedded on your profile page as **My recent activity** — see [Manage your account](/docs/account/account).
+
+## Audit log vs other streams
+
+Three streams the platform exposes, easily confused:
+
+| Stream | Carries | When you use it |
+| --- | --- | --- |
+| **Audit log** | Actor + target + typed action + immutable timestamp | Compliance, security investigations, "who did this?" |
+| [Events feed](/docs/notifications/events-feed) | Lifecycle facts about resources (no required actor) | Ops triage, "what happened, when?" |
+| [Alert incidents](/docs/notifications/alert-rules) | Actionable conditions with `open` → `resolved` lifecycle | Paging on-call, webhook delivery |
+
+Many control-plane events also produce an audit row — the events feed links to its matching audit row via `auditActionId`.
+
+## What each row carries
+
+| Field | Content |
+| --- | --- |
+| `actor` | The user who performed the action (id, display name, email). Always present — unlike events, audit rows are never authorless. |
+| `action` | A typed value from the `AuditAction` enum. See the [Audit action catalog](#audit-action-catalog) below. |
+| `target` | The entity acted on — kind (`node`, `executor`, `api_key`, `organization`, `user`, …) and id. Renders as a link to the target's detail page when applicable. |
+| `scope` | `organization` (most actions) or `platform` (admin-level actions like `user.banned`, `admin.impersonation.started`). |
+| `details` | Sanitized JSON of action-specific fields — `changedFields`, `fromRole` / `toRole`, `expiresAt`, etc. Per-action allow-lists strip everything else; secrets and noisy nested objects never enter the log. |
+| `source` | `ui` / `api` / `system`. Hidden from the org view (kept on the admin surface). |
+| `createdAt` | Server-side timestamp. |
+
+Rows are **immutable** and **never auto-resolve** — there is no lifecycle, only a creation timestamp.
+
+## Filtering
+
+The full-page log supports filters:
+
+- **Action type** — multi-select against the `AuditAction` catalog.
+- **Actor user** — free-text by name or email.
+- **Target kind + target id** — for narrowing to a specific entity.
+- **Date range** — from / to.
+
+Filters compose; the URL reflects active filters so a particular view is shareable.
+
+## Export to CSV
+
+The full-page log has an **Export CSV** button. The export aggregates every row matching the current filters and downloads a CSV with columns: `timestamp`, `actor`, `actor_email`, `action`, `target_type`, `target_id`, `target_name`, `details`. File name: `audit-activity-log-<YYYYMMDD>.csv`.
+
+CSV export is intentionally **disabled** on the **My recent activity** embed on the profile page — that view is a personal slice, not a compliance artefact.
+
+## Role visibility (target)
+
+The audit log is org-scoped: every signed-in user in the org can read entries in their active organization. The platform-target visibility narrows what each role sees:
+
+| Role | Sees |
+| --- | --- |
+| **Org Owner** | All events in the org (own + Admins' + Members'). |
+| **Org Admin** | Own events + every Member's events. **Not** Owner-authored events. |
+| **Org Member** | Own events only. |
+| **System Admin** | All events in the org; can also read across any org from the admin console. |
+
+The **My recent activity** embed on the profile page is always scoped to `actor = self`, regardless of role.
+
+<Note>
+Role-aware narrowing on the full **Audit log** page is being rolled out; until the gate ships, signed-in members may see a broader feed than the target above. Treat the table as the contract you can rely on once the rollout completes.
+</Note>
+
+## Audit action catalog
+
+Every action emitted by the platform is a typed enum value. Examples by domain:
+
+- **Nodes** — `node.created`, `node.updated`, `node.deleted`, `node.start.requested`, `node.stop.requested`, `node.restart.requested`, `node.tags.updated`, `node.group.updated`.
+- **Executors** — `executor.deleted`, `executor.tags.updated`, `executor.group.updated`.
+- **API keys** — `api_key.created`, `api_key.updated`, `api_key.revoked`, `api_key.deleted`.
+- **Users** — `user.password.changed`, `user.profile.updated`, `user.global_role.changed`, `user.organization_role.changed`, `user.organization_membership.added`, `user.organization_membership.removed`, `user.banned`, `user.unbanned`, `user.deleted`.
+- **Organizations** — `organization.created`, `organization.updated`, `organization.deleted`, `organization.invitation.created`.
+- **Notifications** — `notification_settings.updated`.
+- **Impersonation** — `admin.impersonation.requested`, `.approved`, `.denied`, `.revoked`, `.started`, `.stopped`.
+- **Auth lifecycle** — `user.registered`, `session.signed_in`, `session.signed_out`, `user.session.terminated`, `invitation.sent`, `invitation.accepted`, `invitation.revoked`.
+
+Per-action allow-lists determine which fields enter the row's `details`. The catalog is curated server-side; new actions are added via the platform's release cycle.
+
+## Permissions
+
+- **Read** the org audit feed — any org role (subject to the role visibility table above).
+- **Export** CSV — same as read.
+- **Read** the per-user **My recent activity** embed on your own profile — every signed-in user, self-scoped.
+- The audit log itself is append-only — there is no delete, edit, or dismiss UI for any role.
+
+## Related
+
+- [Events feed](/docs/notifications/events-feed) — the resource-lifecycle counterpart; many control-plane events link to their matching audit row.
+- [Manage your account](/docs/account/account) — the embedded **My recent activity** feed.
+- [Roles and permissions](/docs/platform/roles-and-permissions) — how role narrowing is enforced.

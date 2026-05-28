@@ -5,15 +5,28 @@ description: "Org-scoped tokens that executors present to the control plane — 
 
 An **API key** is the credential an executor uses to authenticate with the control plane. Keys are scoped to an organization: a key issued under org A cannot be used to register an executor under org B.
 
-API keys are also the credential of choice for any external automation that wants to call the [GraphQL API](/reference/graphql-api).
+Every key is created with the executor key type — the same backend mutation is used by the [Connect executor wizard](/docs/executors/connect-an-executor) and by the **API keys** page in the Dashboard. There is no separate "personal" key type.
+
+## Lifecycle at a glance
+
+Five operations, performed from **API keys** in the Dashboard:
+
+| Operation | When | Result |
+| --- | --- | --- |
+| **Create** | Bringing a new executor online | New active key; secret shown once |
+| **Rotate** | Refreshing credentials on schedule, or after suspected leak | New active key issued, old key revoked atomically — secret shown once |
+| **Revoke** | Decommissioning an executor or taking a key offline | Key flips to `revoked`; row stays for history |
+| **Delete** | Cleaning up an already-revoked key | Row removed permanently |
+| **View** | Auditing what's in use | List shows status, used-by executors, last-used time |
+
+**Delete is enabled only on revoked rows.** To remove an active key you have to revoke it first — the two-step path is intentional safety.
 
 ## Create a key
 
-Open **Settings** → **API keys** → **Create API key**:
+Open **API keys** → **Create API key**:
 
-1. **Name** — internal label, shown in the key list and audit log. Pick something descriptive: `prod-cluster-1-operator`, `ops-laptop-readonly`.
-2. **Purpose** — `executor` (the common case) or `personal` (CLI / API automation tied to your user).
-3. **Expiry** — optional. Keys without an expiry never auto-revoke.
+1. **Name** — 1–32 characters. Shown in the key list and audit log. Pick something descriptive: `prod-cluster-1-operator`, `eu-bare-metal-3`.
+2. **Expires in** — optional date. If blank, the server applies a default TTL of **one year**.
 
 The full key string is shown **only once** on the success screen.
 
@@ -21,31 +34,66 @@ The full key string is shown **only once** on the success screen.
 Copy the key immediately and store it where you can retrieve it during install — a password manager, a secrets vault, or your provisioning system. There is no recovery path if you lose it; you must rotate.
 </Warning>
 
+Name and expiry are **frozen after create** — there is no edit-in-place. To extend a key's TTL, [rotate](#rotate) it.
+
 ## How keys flow through the platform
 
 - The executor presents the key on every `syncExecutor` call.
-- The `AuthGuard` in the control plane validates the key, sets `activeOrganizationId` from the key's metadata, and proceeds.
-- An **`ExecutorApiKeyUsage`** row is updated with the timestamp of last use, so you can see which key each executor most recently authenticated with.
+- The `AuthGuard` in the control plane validates the key against the better-auth executor key type, lifts `activeOrganizationId` from the key's `referenceId`, and proceeds.
+- The bound key's `lastRequest` timestamp is updated on every successful verification.
+- The first time a new key is presented, the resolver creates the `Executor` row (1:1 with the key via `Executor.apiKeyId @unique`) and emits the `executor.connected` event.
 
-## List and rotate
+## List
 
-The key list shows: name, purpose, created-by, expiry, and last-used timestamp. Common operations:
+The list page renders every key in the active org:
 
-- **Rotate** — issue a new key with the same metadata, immediately invalidating the old. The new key is shown once. Walk the new key out to the executor (see [Rotate executor API keys](/recipes/rotate-api-keys)) and the executor will pick it up on its next call.
-- **Disable** — sets the key inactive without deleting the row. The executor will start failing `syncExecutor` and go offline within `HEARTBEAT_TIMEOUT_MS`.
-- **Delete** — removes the row entirely. Audit history of the key (which executors used it, when) is retained for compliance.
+| Column | Content |
+| --- | --- |
+| **Name** | User-supplied label; key id shown underneath in monospace muted text |
+| **Status** | `active` / `revoked` / `expired` |
+| **Used by** | Top two executors by `lastUsedAt`, plus `+N` for the rest |
+| **Created** | Datetime |
+| **Last used** | Relative; `never` if the key has never been presented |
+| **Actions** | Dropdown — Rotate / Revoke / Delete (Delete enabled only when the row is already revoked) |
+
+There is no search, filter, or pagination today — fine for typical org sizes; revisit if a single org accumulates dozens of keys.
+
+<a id="rotate"></a>
+## Rotate
+
+Rotation issues a replacement key and revokes the old one in the same flow. The new key's name is auto-derived by appending a `YYMMDD` suffix to the previous name (e.g. `prod` → `prod 260513`), trimmed to stay within the 32-char limit.
+
+The new secret is shown once in the same one-shot disclosure dialog as create. The previous row flips to `revoked` and the new row appears as `active`.
+
+Rotation is the **only way to extend a key's TTL** — `expiresAt` cannot be edited post-create. If a key is approaching expiry, rotate first, propagate the new value to the executor, and then delete the revoked old row.
+
+The previous secret stays valid for the microseconds between create and revoke; there is no overlap window an executor would notice.
+
+## Revoke
+
+Revoke flips the row's `enabled` flag to `false`. The next request from the executor presenting that key fails authentication; the row stays in the list with the badge flipped to `revoked` so usage history is preserved.
+
+Revoking does **not** affect the bound `Executor` row — the row remains, but its next poll fails auth until a new key is issued. To revoke a specific executor's bound key from its detail page, see [Revoke executor access](/docs/executors/deactivate-executor).
+
+There is no reactivation. Once revoked, the only forward path is delete + create a new key.
+
+## Delete
+
+Permanently removes the row from the `apikey` table. Disabled on `active` and `expired` rows — revoke first.
+
+Once deleted, the previously-bound `Executor` row loses its credential through the `Executor.apiKeyId` relationship and the *Used by* column for this key is gone with the row.
 
 ## Permissions
 
-- **Create / rotate / disable / delete:** owners and admins.
+- **Create / rotate / revoke / delete:** owners and admins.
 - **List + read last-used:** any org member.
 - The full plaintext key is shown only at creation time and never re-displayed; even owners and system admins cannot read an existing key.
 
 ## Best practice
 
-- Issue **one key per executor** so disabling a single executor doesn't affect others.
+- Issue **one key per executor** so revoking a single executor doesn't affect others.
 - Set an **expiry** for short-term or contractor-issued keys.
 - **Rotate** any key that's been seen on a developer laptop or in a chat thread, even if you can't prove it leaked.
-- Use **disable** before delete when you're decommissioning an executor — gives you a 30s confirmation that the right key is being retired.
+- Use **revoke** before **delete** when decommissioning an executor — gives you a moment to confirm the right key is being retired.
 
 See [Rotate executor API keys](/recipes/rotate-api-keys) for the zero-downtime rotation flow.

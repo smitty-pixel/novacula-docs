@@ -3,7 +3,7 @@ title: "Supported chains overview"
 description: "At-a-glance matrix of chains, networks, clients, and node types Novacula supports"
 ---
 
-Novacula supports five blockchains today, each implemented as a chain adapter inside `@vos/adapter` and exposed through the same `ChainAdapter` interface. This page is the matrix; the per-chain pages cover ports, defaults, and override surfaces in detail.
+Novacula supports eight blockchains today, each implemented as a chain adapter inside `@vos/adapter` and exposed through the same `ChainAdapter` interface. This page is the matrix; the per-chain pages cover ports, defaults, and override surfaces in detail.
 
 ## Matrix
 
@@ -12,8 +12,13 @@ Novacula supports five blockchains today, each implemented as a chain adapter in
 | **Bitcoin** | `mainnet`, `test`, `signet` | `node` | `bitcoind` | Full | [Bitcoin](/docs/chains/bitcoin) |
 | **BSC** | `mainnet`, `chapel` | `node` | `geth` (BSC fork) | Full, Archive | [BSC](/docs/chains/bsc) |
 | **Ethereum** | `mainnet`, `sepolia`, `hoodi` | `el` + `cl` | EL: `geth`, `reth`, `nethermind`, `erigon`<br/>CL: `lighthouse`, `prysm`, `lodestar` | Full, Archive | [Ethereum](/docs/chains/ethereum) |
+| **Igra** | `mainnet`, `galleon-testnet` | `kaspad` + `el` | `kaspad` · `igra-reth` | Full | [Igra](/docs/chains/igra) |
+| **Ink** | `ink-mainnet`, `ink-sepolia` | `el` + `rollup` | `op-geth` · `op-node` | Full | [Ink](/docs/chains/ink) |
+| **Monad** | `mainnet`, `testnet` | `consensus` + `execution` + `rpc` | `monad-bft` · `monad-execution` · `monad-rpc` | Full | [Monad](/docs/chains/monad) |
 | **Sui** | `mainnet`, `testnet` | `node` | `sui-node` | Full | [Sui](/docs/chains/sui) |
 | **Tron** | `mainnet`, `nile` | `node` | `java-tron` | Full | [Tron](/docs/chains/tron) |
+
+Archive node type is supported on **Ethereum** and **BSC** only. The remaining chains expose Full only — for archival use cases on those, tune the chain-specific retention / pruning knobs covered on each per-chain page.
 
 The exact set of versions a *given executor* can run is its [capabilities](/docs/executors/executor-capabilities) blob, declared on every sync. The deploy wizard intersects this matrix with the target executor's capabilities.
 
@@ -31,20 +36,26 @@ The chain adapter ships per-network resource defaults, used by the deploy wizard
 | Ethereum mainnet | 4 cores | 16 GiB | 2548 GiB |
 | Ethereum sepolia | 2 cores | 8 GiB | 300 GiB |
 | Ethereum hoodi | 2 cores | 8 GiB | 300 GiB |
+| Igra mainnet | per adapter | per adapter | per adapter |
+| Igra galleon-testnet | per adapter | per adapter | per adapter |
+| Ink ink-mainnet | per adapter | per adapter | per adapter |
+| Ink ink-sepolia | per adapter | per adapter | per adapter |
+| Monad mainnet | per adapter | per adapter | per adapter |
+| Monad testnet | per adapter | per adapter | per adapter |
 | Sui mainnet | 16 cores | 128 GiB | 4000 GiB |
 | Sui testnet | 8 cores | 64 GiB | 3000 GiB |
 | Tron mainnet | 16 cores | 32 GiB | 4000 GiB |
 | Tron nile | 8 cores | 16 GiB | 300 GiB |
 
-Numbers above are for **Full** nodes. Archive (Ethereum, BSC) needs more disk — see the per-chain pages.
+Numbers above are for **Full** nodes. Archive (Ethereum, BSC) needs more disk — see the per-chain pages. Defaults for the L2 chains (Igra, Ink) and for Monad are tracked per-adapter; consult the deploy wizard for the live numbers your executor declares.
 
 ## What each chain shares
 
 All chains, regardless of client choice, share these conventions:
 
 - **Outbound from the executor.** No inbound ports need exposing for the platform; you may still want to expose RPC for your own use.
-- **Single data directory per node.** The chain adapter writes config + data under a single mount (Operator: one PVC; Agent: a subdirectory under `data_dir`).
-- **Init steps are codified.** Genesis blob downloads (Sui), JWT secret generation (Ethereum), snapshot fetches (Tron, optional), and checkpoint sync URLs (Ethereum CL) are all init-container or init-step logic owned by the adapter, not config you maintain.
+- **Single data directory per node.** The chain adapter writes config + data under a single mount (Operator: one PVC; Agent: a subdirectory under `data_dir`). Monad is the one partial exception — triedb lives on its own volume.
+- **Init steps are codified.** Genesis blob downloads (Sui), JWT secret generation (Ethereum, Igra, Ink), snapshot fetches (Tron, optional), and checkpoint sync URLs (Ethereum CL) are all init-container or init-step logic owned by the adapter, not config you maintain.
 - **Override schema.** Every adapter declares `managedPaths` / `managedFlags` (rejected if you try to override) and `knownKeys` / `knownFlags` (typed, described, rendered with hints in the UI). See [Edit node configuration](/docs/nodes/edit-configuration).
 
 ## Adding chain support

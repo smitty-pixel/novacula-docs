@@ -1,46 +1,50 @@
 ---
 title: "Manage your account"
-description: "Edit your profile, change password, and view active sessions"
+description: "Edit your display name, change password, and view active sessions"
 ---
 
 Your **account** in Novacula is the user identity behind every action you take in the console. It is independent of any organization — you keep one account even if you join, leave, or switch between organizations.
 
-Open **Account** from the avatar menu in the top-right.
+Open **Account** from the avatar menu in the top-right. The page is split into a **Profile** card, a **Change password** card, an **Active sessions** card, and a **My recent activity** feed.
 
 ## Profile
 
-Editable fields:
+Today only one field is self-editable:
 
-- **Name** — shown in the events feed, member list, and audit log.
-- **Email** — the address you log in with. Changing it sends a verification message; the change takes effect once you confirm.
-- **Avatar** — optional image. Used in the member list and event entries.
+- **Display name** — shown in the events feed, member list, and audit log.
+- **Email** — rendered as a read-only field with the hint *"Contact an administrator to change your email."* Email change is admin-only because it requires the email-verification flow that ships with the platform's email transport (still in progress). See [Edit member profile](/docs/account/members-and-invitations) for the admin-directed flow.
 
-Only you can edit your own profile. A system admin can also rename users from the admin console — that change is recorded in the audit log.
+A system admin can also rename users from the admin console — both changes (yours and the admin's) are recorded in the audit log.
 
-## Password
+## Change password
 
-Use **Change password** to rotate the password tied to your email. You'll need your current password to confirm the change. If you've lost access, see [Sessions and security](/docs/account/sessions) for the password reset flow.
+Use **Change password** to rotate the password tied to your email:
 
-After a password change, all your existing sessions stay valid — to terminate them, revoke them explicitly from the sessions panel.
+- Enter your current password, then the new one (minimum 8 chars).
+- On success, all your **other** active sessions are revoked; the session you're using stays valid.
+
+If you don't remember your current password, see [If you lost your password](/docs/account/sessions#if-you-lost-your-password) — an admin in your organization can reset it for you.
 
 ## Active sessions
 
-Every browser, IDE, or programmatic client you log into creates a **session**. The sessions panel shows:
+Every browser, IDE, or programmatic client you log into creates a **session**. The card shows, per row:
 
 - IP address and user agent of the device.
-- Timestamps for created and last-active.
-- Whether this is the session you're currently viewing.
+- Created and last-active timestamps.
+- A marker for the session you're currently viewing.
 
-Use **Revoke** on any row to invalidate that session immediately. Useful if you log in from a shared device and forget to log out, or if you suspect credentials were leaked.
+Use **Revoke** on any non-current row to terminate that session immediately. Use **Sign out everywhere else** above the table to revoke every session except the current one at once. The button is disabled when only the current session is present.
 
-See [Sessions and security](/docs/account/sessions) for the full session model and password-reset flow.
+See [Sessions and security](/docs/account/sessions) for the full session model and impersonation behaviour.
 
-## Linked accounts
+## My recent activity
 
-If your organization uses SSO or social login, the linked identity providers appear here. Unlinking a provider doesn't delete your account — it just removes that login method.
+Below the profile cards, the account page embeds a chronological feed of every audit-worthy action **you** performed across the organization — sign-ins, settings changes, node operations, key rotations, and so on. Filter by date range or action type to focus on a specific incident.
+
+The same data feeds [Audit log](/docs/audit/audit-log) at the org level; this view is the self-scoped slice (`actorUserId === currentUser.id`) of that log.
 
 ## Switching organization
 
-If you belong to more than one organization (system admin only — regular users belong to exactly one), use the org switcher in the sidebar header. Switching changes the **active organization** on your session, which is what every tenant-scoped query reads.
+Regular users belong to exactly one organization at a time, so there is no switcher in the sidebar — the active organization is whichever one your membership points at. System admins can act across organizations by impersonating users from the admin console; that opens a new session marked with `impersonatedBy` (see [Sessions and security](/docs/account/sessions)).
 
 See [Manage your organization](/docs/account/organization) for what an organization actually is.

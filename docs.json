@@ -3,6 +3,11 @@
   "theme": "mint",
   "name": "Novacula",
   "description": "Novacula — B2B platform for running blockchain full nodes for RPC on your own infrastructure",
+  "logo": {
+    "light": "/images/logo-light.svg",
+    "dark": "/images/logo-dark.svg",
+    "href": "/"
+  },
   "colors": {
     "primary": "#0D9373",
     "light": "#55D799",
@@ -20,6 +25,7 @@
             "groups": [
               {
                 "group": "Get Started",
+                "icon": "rocket",
                 "pages": [
                   "docs/introduction",
                   "docs/get-started/quickstart",
@@ -28,6 +34,7 @@
               },
               {
                 "group": "Platform",
+                "icon": "diagram-project",
                 "pages": [
                   "docs/platform/architecture",
                   "docs/platform/desired-state-model",
@@ -38,6 +45,7 @@
               },
               {
                 "group": "Account",
+                "icon": "user",
                 "pages": [
                   "docs/account/account",
                   "docs/account/organization",
@@ -48,6 +56,7 @@
               },
               {
                 "group": "Executors",
+                "icon": "server",
                 "pages": [
                   "docs/executors/overview",
                   "docs/executors/connect-an-executor",
@@ -60,6 +69,7 @@
               },
               {
                 "group": "Nodes",
+                "icon": "cubes",
                 "pages": [
                   "docs/nodes/overview",
                   "docs/nodes/deploy-a-node",
@@ -73,6 +83,7 @@
               },
               {
                 "group": "Notifications & Events",
+                "icon": "bell",
                 "pages": [
                   "docs/notifications/events-feed",
                   "docs/notifications/alert-rules",
@@ -82,13 +93,31 @@
               },
               {
                 "group": "Supported Chains",
+                "icon": "link",
                 "pages": [
                   "docs/chains/overview",
                   "docs/chains/bitcoin",
                   "docs/chains/bsc",
                   "docs/chains/ethereum",
+                  "docs/chains/igra",
+                  "docs/chains/ink",
+                  "docs/chains/monad",
                   "docs/chains/sui",
                   "docs/chains/tron"
+                ]
+              },
+              {
+                "group": "Audit",
+                "icon": "clipboard-list",
+                "pages": [
+                  "docs/audit/audit-log"
+                ]
+              },
+              {
+                "group": "AI Assistant",
+                "icon": "sparkles",
+                "pages": [
+                  "docs/ai-assistant/overview"
                 ]
               }
             ]
@@ -98,6 +127,7 @@
             "groups": [
               {
                 "group": "Recipes",
+                "icon": "book",
                 "pages": [
                   "recipes/provision-on-kubernetes",
                   "recipes/provision-on-bare-metal",
@@ -108,24 +138,11 @@
             ]
           },
           {
-            "tab": "API",
-            "groups": [
-              {
-                "group": "Reference",
-                "pages": [
-                  "reference/graphql-api",
-                  "reference/configuration",
-                  "reference/environment-variables",
-                  "reference/agent-cli"
-                ]
-              }
-            ]
-          },
-          {
             "tab": "Release notes",
             "groups": [
               {
                 "group": "Release notes",
+                "icon": "tag",
                 "pages": [
                   "release-notes/release-notes"
                 ]
@@ -141,6 +158,7 @@
         "groups": [
           {
             "group": "Self-hosted",
+            "icon": "warehouse",
             "pages": [
               "self-hosted/introduction"
             ]

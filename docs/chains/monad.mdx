@@ -1,0 +1,87 @@
+---
+title: "Monad"
+description: "Three-role (consensus + execution + rpc) high-throughput EVM chain"
+---
+
+Monad is a high-throughput EVM-compatible chain that runs as **three processes** per node, more than any other chain Novacula manages today:
+
+- **`consensus`** — `monad-bft`, the BFT consensus node.
+- **`execution`** — `monad-execution`, the execution-layer state engine.
+- **`rpc`** — `monad-rpc`, the JSON-RPC / WebSocket front-end.
+
+Versions are pinned in lock-step across the three roles — pick one and the wizard pre-selects the matching version on the other two. Telemetry flows out through a local **OTEL collector** that re-exposes Prometheus on `:8889`.
+
+## Networks and resources
+
+| Network |
+| --- |
+| `mainnet` |
+| `testnet` |
+
+Per-network resource defaults are pre-filled by the deploy wizard.
+
+## Clients
+
+| Role | Client | Versions |
+| --- | --- | --- |
+| `consensus` | **monad-bft** | `0.14.3`, `0.14.2`, `0.14.1` |
+| `execution` | **monad-execution** | `0.14.3`, `0.14.2`, `0.14.1` |
+| `rpc` | **monad-rpc** | `0.14.3`, `0.14.2`, `0.14.1` |
+
+## Ports
+
+| Name | Port | Owner | Notes |
+| --- | --- | --- | --- |
+| Consensus P2P (TCP / UDP) | `8000` | monad-bft | |
+| Peer auth | `8001` | monad-bft | |
+| JSON-RPC | `8080` | monad-rpc | |
+| WebSocket RPC | `8081` | monad-rpc | Requires `--ws-enabled` |
+| Prometheus scrape | `8889` | OTEL collector | Re-export of OTLP metrics |
+| OTLP gRPC receiver | `4317` | OTEL collector | Internal — execution / rpc push here |
+
+The OTEL collector inverts the usual scrape model: monad-execution and monad-rpc *push* OTLP gRPC to `127.0.0.1:4317`, the collector aggregates, and Novacula's executor scrapes the collector's Prometheus endpoint on `:8889`.
+
+## Init steps
+
+1. **Bare-metal host setup** (Agent backend only) — non-trivial: hugepages, dedicated `monad` user, host-side `otelcol` install, websocket support, apt repo provisioning. The Agent runs these once during install. On the Operator backend, the same setup is baked into the container image.
+2. **Keystore + name-record signing** — happens on first deploy. The per-node keystore password is set via `defineKeystorePassword`.
+3. **Triedb** — a separate persistent volume managed by the adapter. A `hardReset` helper exists for full state wipes during testing; use with care.
+
+## Config overrides
+
+Monad is the only chain that mixes **CLI argument overrides** with **multiple config files**.
+
+### Files
+
+- **`triedb`** — TOML for the triedb sidecar layout (paths, capacity, snapshot policy).
+- **`node-settings`** — TOML with the node identity / keystore / chain selection.
+- **`node.toml`** — TOML for monad-execution and monad-rpc runtime knobs.
+
+Each file has its own override schema (`NODE_SETTINGS_CONFIG_SCHEMA`, `NODE_TOML_CONFIG_SCHEMA`) declaring managed paths and known keys. See `packages/adapter/src/monad/config-resolvers.ts` for the canonical list.
+
+### CLI args
+
+- **`monad-bft`** — managed-flag set: `MONAD_BFT_MANAGED_FLAGS`.
+- **`monad-execution`** — managed-flag set: `MONAD_EXECUTION_MANAGED_FLAGS`.
+- **`monad-rpc`** — typically not overridden; the schema in `MONAD_ARGS_SCHEMAS` enforces.
+
+Anything off the managed list and off the known list on each surface is passed through verbatim.
+
+## Metrics
+
+Three-process scrape on each reporter tick:
+
+- Common per-node fields (status, height, peers, syncProgress, disk) come from monad-execution + monad-rpc via the OTEL collector at `:8889`.
+- **18 chain-specific extras** are wired into the `extras` bag — see [Node monitoring → Per-chain extras](/docs/nodes/monitoring#per-chain-extras) for the catalog. Examples: `consensus_committed_blocks`, `consensus_local_timeouts`, `raptorcast_messages_received`, `raptorcast_recv_errors`, `execution_ledger_*`, `statesync_*`, `rpcActiveRequests`.
+
+## Common patterns
+
+- **Public RPC node** — accept defaults; expose `:8080` (HTTP) and `:8081` (WS, after enabling) through your own reverse proxy.
+- **Test-network sandbox** — deploy a `testnet` node first; the `hardReset` helper in `triedb.ts` lets you wipe and re-sync without leaving artefacts.
+- **Operator backend recommended for first-time operators** — bare-metal host setup is non-trivial. The Operator backend hides the hugepages / OTEL / user-management work behind the container image.
+
+## Caveats
+
+- Versions are locked across the three roles — there is no "upgrade execution without consensus" path.
+- Triedb is a separate volume; sizing it correctly matters more than for any other chain.
+- The OTEL collector is a hard dependency, not optional — monad-execution and monad-rpc have no direct Prometheus endpoint of their own.
