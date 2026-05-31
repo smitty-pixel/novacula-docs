@@ -8,6 +8,7 @@
     "dark": "/images/logo-dark.svg",
     "href": "/"
   },
+  "favicon": "/images/favicon.ico",
   "colors": {
     "primary": "#0D9373",
     "light": "#55D799",
